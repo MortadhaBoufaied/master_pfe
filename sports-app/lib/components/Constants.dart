@@ -5,13 +5,15 @@ const String _apiHostOverride = String.fromEnvironment('API_HOST');
 const String _chatbotHostOverride = String.fromEnvironment('CHATBOT_HOST');
 
 // If you set API_HOST at build time, it will override the default.
-// Example:
+// Example (local):
+//   flutter run --dart-define=API_HOST=localhost:8080
+// Example (deployed):
 //   flutter run --dart-define=API_HOST=sports-management-project-3pip.onrender.com
 String _backendHost() {
   final raw =
       _apiHostOverride.isNotEmpty
           ? _apiHostOverride
-          : 'sports-management-project-uiku.onrender.com';
+          : 'localhost:8080';
 
   // If someone provided a full URL (e.g. https://example.com), strip scheme + trailing slashes.
   var host = raw.trim();
