@@ -29,14 +29,20 @@ String _backendHost() {
   return host;
 }
 
+// Determine if using localhost (non-secure) or deployed (secure)
+bool _isLocalhost() {
+  final host = _backendHost();
+  return host.startsWith('localhost') || host.startsWith('127.0.0.1');
+}
+
 // REST API BASE
-final String API_BASE_URL = 'https://${_backendHost()}/api';
+final String API_BASE_URL = '${_isLocalhost() ? 'http' : 'https'}://${_backendHost()}/api';
 
 const Duration API_TIMEOUT = Duration(seconds: 30);
 
 // WEBSOCKET BASE
-// Use secure websocket on HTTPS deployments
-final String API_WS_BASE_URL = 'wss://${_backendHost()}/ws';
+// Use secure websocket on HTTPS deployments, regular websocket on localhost
+final String API_WS_BASE_URL = '${_isLocalhost() ? 'ws' : 'wss'}://${_backendHost()}/ws';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TEXT COLORS - Use AppColors centralized palette
