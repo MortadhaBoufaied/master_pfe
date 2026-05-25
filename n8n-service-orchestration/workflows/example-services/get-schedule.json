@@ -1,0 +1,54 @@
+{
+  "name": "Get Available Schedule Service",
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "path": "get-schedule"
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "const body = $input.all()[0].json;\nconst params = body.parameters;\nreturn {\n  service_type: params.service_type,\n  duration_minutes: params.duration_minutes || 30,\n  days_ahead: params.days_ahead || 7,\n  timestamp: new Date().toISOString()\n};"
+      },
+      "name": "Extract Schedule Request",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=http://backend:8080/api/availability?service={{ $node.\"Extract Schedule Request\".json.service_type }}&duration={{ $node.\"Extract Schedule Request\".json.duration_minutes }}&days={{ $node.\"Extract Schedule Request\".json.days_ahead }}"
+      },
+      "name": "Get Available Slots",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "const slots = $input.all()[0].json;\nconst formatted_slots = slots.available_slots.map(slot => ({\n  date: slot.date,\n  time: slot.time,\n  available: slot.available\n}));\nreturn {\n  status: 'success',\n  data: {\n    service_type: slots.service_type,\n    duration: slots.duration,\n    slots_table: formatted_slots,\n    total_slots: formatted_slots.length\n  }\n};"
+      },
+      "name": "Format Schedule",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [850, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{"node": "Extract Schedule Request", "branch": 0, "type": "main", "index": 0}]]
+    },
+    "Extract Schedule Request": {
+      "main": [[{"node": "Get Available Slots", "branch": 0, "type": "main", "index": 0}]]
+    },
+    "Get Available Slots": {
+      "main": [[{"node": "Format Schedule", "branch": 0, "type": "main", "index": 0}]]
+    }
+  }
+}

@@ -1,0 +1,67 @@
+{
+  "name": "Service Executor Base Template",
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://localhost:8000/api/chat"
+      },
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "return {\n  service_id: $input.all()[0].json.service_id,\n  parameters: $input.all()[0].json.parameters,\n  user_id: $input.all()[0].json.user_id,\n  timestamp: $input.all()[0].json.timestamp\n};"
+      },
+      "name": "Extract Service Info",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.your-backend.com/api/service"
+      },
+      "name": "Call Backend Service",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Format the response\nconst response = $input.all()[0].json;\nreturn {\n  status: response.success ? 'success' : 'error',\n  data: response.data,\n  execution_time_ms: response.execution_time\n};"
+      },
+      "name": "Format Response",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://localhost:8000/api/service-response"
+      },
+      "name": "Return to Chatbot",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1050, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [[{"node": "Extract Service Info", "branch": 0, "type": "main", "index": 0}]]
+    },
+    "Extract Service Info": {
+      "main": [[{"node": "Call Backend Service", "branch": 0, "type": "main", "index": 0}]]
+    },
+    "Call Backend Service": {
+      "main": [[{"node": "Format Response", "branch": 0, "type": "main", "index": 0}]]
+    },
+    "Format Response": {
+      "main": [[{"node": "Return to Chatbot", "branch": 0, "type": "main", "index": 0}]]
+    }
+  }
+}

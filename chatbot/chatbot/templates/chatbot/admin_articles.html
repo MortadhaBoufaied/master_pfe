@@ -1,0 +1,17 @@
+<!doctype html>
+<html><body>
+<h1>Admin Articles</h1>
+<form method="POST">{% csrf_token %}
+  <input name="title" placeholder="Title"><br><br>
+  <textarea name="content" style="width:100%;height:160px" placeholder="Content"></textarea><br><br>
+  <button type="submit">Save</button>
+</form>
+<hr>
+<ul>
+  {% for article in articles %}
+    <li><b>{{ article.title }}</b> - {{ article.content|slice:':100' }}...</li>
+  {% empty %}
+    <li>No articles yet.</li>
+  {% endfor %}
+</ul>
+</body></html>

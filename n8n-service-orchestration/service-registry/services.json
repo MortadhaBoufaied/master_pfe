@@ -1,0 +1,465 @@
+{
+  "version": "1.0.1",
+  "last_updated": "2026-05-13",
+  "description": "Master registry of all available services that can be invoked through n8n",
+  "services": [
+    {
+      "id": "get-user-profile",
+      "name": "Get User Profile",
+      "description": "Retrieve user profile information",
+      "category": "user-management",
+      "keywords": ["profile", "my account", "user info", "account details", "personal info", "show my profile", "who am i", "my info"],
+      "enabled": true,
+      "workflow_id": "get-user-profile",
+      "webhook_path": "/webhook/get-user-profile",
+      "timeout_ms": 3000,
+      "response_type": "direct",
+      "requires_authentication": true,
+      "parameters": {
+        "user_id": {
+          "type": "string",
+          "required": false,
+          "description": "User ID (optional, from session)"
+        }
+      },
+      "responses": {
+        "success": "profile_card",
+        "error": "error_default"
+      }
+    },
+    {
+      "id": "book-appointment",
+      "name": "Book Appointment",
+      "description": "Schedule an appointment with a service",
+      "category": "appointments",
+      "keywords": ["book", "schedule", "appointment", "reserve", "booking", "book a class", "register for", "sign up", "enroll", "book training", "schedule session"],
+      "enabled": true,
+      "workflow_id": "book-appointment",
+      "webhook_path": "/webhook/book-appointment",
+      "timeout_ms": 5000,
+      "response_type": "direct",
+      "requires_authentication": true,
+      "parameters": {
+        "service_type": {
+          "type": "string",
+          "required": true,
+          "description": "Type of service"
+        },
+        "date": {
+          "type": "string",
+          "required": true,
+          "format": "YYYY-MM-DD",
+          "description": "Appointment date"
+        },
+        "time": {
+          "type": "string",
+          "required": true,
+          "format": "HH:mm",
+          "description": "Appointment time"
+        },
+        "notes": {
+          "type": "string",
+          "required": false,
+          "description": "Additional notes"
+        }
+      },
+      "responses": {
+        "success": "booking_confirmation",
+        "error": "booking_error"
+      }
+    },
+    {
+      "id": "get-schedule",
+      "name": "Get Available Schedule",
+      "description": "Retrieve available time slots",
+      "category": "schedule",
+      "keywords": ["availability", "when", "schedule", "free time", "available", "slots", "timetable", "class schedule", "training schedule", "what time", "next session"],
+      "enabled": true,
+      "workflow_id": "get-schedule",
+      "webhook_path": "/webhook/get-schedule",
+      "timeout_ms": 3000,
+      "response_type": "direct",
+      "requires_authentication": false,
+      "parameters": {
+        "service_type": {
+          "type": "string",
+          "required": true,
+          "description": "Type of service"
+        },
+        "duration_minutes": {
+          "type": "integer",
+          "required": false,
+          "default": 30,
+          "description": "Appointment duration"
+        },
+        "days_ahead": {
+          "type": "integer",
+          "required": false,
+          "default": 7,
+          "description": "Number of days to look ahead"
+        }
+      },
+      "responses": {
+        "success": "schedule_list",
+        "error": "schedule_error"
+      }
+    },
+    {
+      "id": "submit-feedback",
+      "name": "Submit Feedback",
+      "description": "Submit user feedback or complaint",
+      "category": "feedback",
+      "keywords": ["feedback", "review", "complaint", "issue", "report", "suggestion", "tell us", "what do you think", "opinion", "comment", "problem"],
+      "enabled": true,
+      "workflow_id": "submit-feedback",
+      "webhook_path": "/webhook/submit-feedback",
+      "timeout_ms": 4000,
+      "response_type": "direct",
+      "requires_authentication": false,
+      "parameters": {
+        "message": {
+          "type": "string",
+          "required": true,
+          "max_length": 1000,
+          "description": "Feedback message"
+        },
+        "rating": {
+          "type": "integer",
+          "required": false,
+          "min": 1,
+          "max": 5,
+          "description": "Rating (1-5)"
+        },
+        "category": {
+          "type": "string",
+          "required": false,
+          "enum": ["bug", "feature", "experience", "other"],
+          "description": "Feedback category"
+        }
+      },
+      "responses": {
+        "success": "feedback_confirmation",
+        "error": "feedback_error"
+      }
+    },
+    {
+      "id": "get-payment-status",
+      "name": "Get Payment Status",
+      "description": "Check payment status or invoice details",
+      "category": "payments",
+      "keywords": ["payment", "invoice", "bill", "billing", "status", "amount", "due", "fees", "fee status", "paid", "unpaid", "how much", "cost"],
+      "enabled": true,
+      "workflow_id": "get-payment-status",
+      "webhook_path": "/webhook/get-payment-status",
+      "timeout_ms": 3000,
+      "response_type": "direct",
+      "requires_authentication": true,
+      "parameters": {
+        "user_id": {
+          "type": "string",
+          "required": false,
+          "description": "User ID"
+        },
+        "invoice_id": {
+          "type": "string",
+          "required": false,
+          "description": "Specific invoice ID"
+        }
+      },
+      "responses": {
+        "success": "payment_status",
+        "error": "payment_error"
+      }
+    },
+    {
+      "id": "cancel-appointment",
+      "name": "Cancel Appointment",
+      "description": "Cancel an existing appointment",
+      "category": "appointments",
+      "keywords": ["cancel", "delete", "remove", "appointment", "booking", "cancel class", "drop out", "withdraw", "unregister"],
+      "enabled": true,
+      "workflow_id": "cancel-appointment",
+      "webhook_path": "/webhook/cancel-appointment",
+      "timeout_ms": 3000,
+      "response_type": "direct",
+      "requires_authentication": true,
+      "parameters": {
+        "appointment_id": {
+          "type": "string",
+          "required": true,
+          "description": "Appointment ID to cancel"
+        },
+        "reason": {
+          "type": "string",
+          "required": false,
+          "description": "Cancellation reason"
+        }
+      },
+      "responses": {
+        "success": "cancellation_confirmation",
+        "error": "cancellation_error"
+      }
+    },
+    {
+      "id": "get-service-details",
+      "name": "Get Service Details",
+      "description": "Get detailed information about a specific service",
+      "category": "services",
+      "keywords": ["service details", "information", "describe", "about", "what is"],
+      "enabled": true,
+      "workflow_id": "get-service-details",
+      "webhook_path": "/webhook/get-service-details",
+      "timeout_ms": 2000,
+      "response_type": "direct",
+      "requires_authentication": false,
+      "parameters": {
+        "service_name": {
+          "type": "string",
+          "required": true,
+          "description": "Service name or ID"
+        }
+      },
+      "responses": {
+        "success": "service_details",
+        "error": "service_not_found"
+      }
+    },
+    {
+      "id": "track-order",
+      "name": "Track Order",
+      "description": "Track order or service request status",
+      "category": "orders",
+      "keywords": ["track", "order", "status", "progress", "where is"],
+      "enabled": true,
+      "workflow_id": "track-order",
+      "webhook_path": "/webhook/track-order",
+      "timeout_ms": 3000,
+      "response_type": "direct",
+      "requires_authentication": true,
+      "parameters": {
+        "order_id": {
+          "type": "string",
+          "required": true,
+          "description": "Order or request ID"
+        }
+      },
+      "responses": {
+        "success": "order_tracking",
+        "error": "order_not_found"
+      }
+    },
+    {
+      "id": "get-faq",
+      "name": "Get FAQ",
+      "description": "Retrieve frequently asked questions",
+      "category": "help",
+      "keywords": ["faq", "questions", "help", "information", "how to"],
+      "enabled": true,
+      "workflow_id": "get-faq",
+      "webhook_path": "/webhook/get-faq",
+      "timeout_ms": 2000,
+      "response_type": "direct",
+      "requires_authentication": false,
+      "parameters": {
+        "category": {
+          "type": "string",
+          "required": false,
+          "description": "FAQ category"
+        },
+        "search_term": {
+          "type": "string",
+          "required": false,
+          "description": "Search within FAQ"
+        }
+      },
+      "responses": {
+        "success": "faq_list",
+        "error": "faq_not_found"
+      }
+    },
+    {
+      "id": "get-player-stats",
+      "name": "Get Player Statistics",
+      "description": "Retrieve player performance statistics and analytics",
+      "category": "academy",
+      "keywords": ["stats", "statistics", "performance", "rating", "score", "player stats", "my performance", "how am i doing", "progress"],
+      "enabled": true,
+      "workflow_id": "get-player-stats",
+      "webhook_path": "/webhook/get-player-stats",
+      "timeout_ms": 3000,
+      "response_type": "direct",
+      "requires_authentication": true,
+      "parameters": {
+        "player_id": {
+          "type": "string",
+          "required": false,
+          "description": "Player ID (optional, from session)"
+        },
+        "period": {
+          "type": "string",
+          "required": false,
+          "enum": ["week", "month", "season"],
+          "description": "Statistics period"
+        }
+      },
+      "responses": {
+        "success": "player_stats_card",
+        "error": "error_default"
+      }
+    },
+    {
+      "id": "get-team-info",
+      "name": "Get Team Information",
+      "description": "Retrieve information about academy teams and divisions",
+      "category": "academy",
+      "keywords": ["team", "division", "group", "squad", "team info", "which team", "my team", "team members"],
+      "enabled": true,
+      "workflow_id": "get-team-info",
+      "webhook_path": "/webhook/get-team-info",
+      "timeout_ms": 3000,
+      "response_type": "direct",
+      "requires_authentication": false,
+      "parameters": {
+        "team_id": {
+          "type": "string",
+          "required": false,
+          "description": "Team or division ID"
+        }
+      },
+      "responses": {
+        "success": "team_info",
+        "error": "team_not_found"
+      }
+    },
+    {
+      "id": "submit-scouting-report",
+      "name": "Submit Scouting Report",
+      "description": "Submit a player scouting or evaluation report",
+      "category": "scouting",
+      "keywords": ["scouting", "report", "scout", "evaluate", "assessment", "talent", "potential", "rating player"],
+      "enabled": true,
+      "workflow_id": "submit-scouting-report",
+      "webhook_path": "/webhook/submit-scouting-report",
+      "timeout_ms": 5000,
+      "response_type": "direct",
+      "requires_authentication": true,
+      "parameters": {
+        "player_id": {
+          "type": "string",
+          "required": true,
+          "description": "Player ID"
+        },
+        "report_data": {
+          "type": "object",
+          "required": true,
+          "description": "Scouting report data"
+        }
+      },
+      "responses": {
+        "success": "report_submitted",
+        "error": "report_error"
+      }
+    },
+    {
+      "id": "get-events",
+      "name": "Get Upcoming Events",
+      "description": "Get upcoming matches, training sessions, or academy events",
+      "category": "academy",
+      "keywords": ["event", "events", "match", "matches", "training", "game", "upcoming", "what's next", "next match", "schedule"],
+      "enabled": true,
+      "workflow_id": "get-events",
+      "webhook_path": "/webhook/get-events",
+      "timeout_ms": 3000,
+      "response_type": "direct",
+      "requires_authentication": false,
+      "parameters": {
+        "event_type": {
+          "type": "string",
+          "required": false,
+          "enum": ["match", "training", "all"],
+          "description": "Type of event to retrieve"
+        },
+        "days_ahead": {
+          "type": "integer",
+          "required": false,
+          "default": 30,
+          "description": "Number of days to look ahead"
+        }
+      },
+      "responses": {
+        "success": "events_list",
+        "error": "events_not_found"
+      }
+    },
+    {
+      "id": "get-academy-info",
+      "name": "Get Academy Information",
+      "description": "Get general information about the football academy",
+      "category": "academy",
+      "keywords": ["academy", "about academy", "academy info", "programs", "divisions", "levels", "categories"],
+      "enabled": true,
+      "workflow_id": "get-academy-info",
+      "webhook_path": "/webhook/get-academy-info",
+      "timeout_ms": 2000,
+      "response_type": "direct",
+      "requires_authentication": false,
+      "parameters": {},
+      "responses": {
+        "success": "academy_info",
+        "error": "error_default"
+      }
+    }
+  ],
+  "categories": [
+    {
+      "id": "user-management",
+      "name": "User Management",
+      "description": "Services related to user profile and account"
+    },
+    {
+      "id": "appointments",
+      "name": "Appointments",
+      "description": "Services for booking and managing appointments"
+    },
+    {
+      "id": "schedule",
+      "name": "Schedule",
+      "description": "Services for viewing schedules and availability"
+    },
+    {
+      "id": "feedback",
+      "name": "Feedback",
+      "description": "Services for submitting feedback"
+    },
+    {
+      "id": "payments",
+      "name": "Payments",
+      "description": "Services related to payments and billing"
+    },
+    {
+      "id": "orders",
+      "name": "Orders",
+      "description": "Services for order tracking"
+    },
+    {
+      "id": "services",
+      "name": "Services",
+      "description": "Services information"
+    },
+    {
+      "id": "help",
+      "name": "Help",
+      "description": "Help and FAQ services"
+    },
+    {
+      "id": "academy",
+      "name": "Academy Services",
+      "description": "Football academy specific services"
+    },
+    {
+      "id": "scouting",
+      "name": "Scouting Services",
+      "description": "Scouting and talent evaluation services"
+    }
+  ]
+}

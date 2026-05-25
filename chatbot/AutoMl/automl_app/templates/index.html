@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="fr" data-bs-theme="light">
+  <head>
+    <meta charset="UTF-8" />
+    <title>AutoML - Analyse intelligente</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <!-- Bootstrap & Google Fonts -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css"
+    />
+
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}"
+    />
+    <style>
+      :root {
+        --primary-color: #6366f1;
+      }
+
+      body {
+        font-family: "Segoe UI", sans-serif;
+        margin: 0;
+        padding: 0;
+        background: #f3f4f6;
+      }
+
+      /* Floating Chat Button */
+      #chatbox-toggle {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 1050;
+        background-color: var(--primary-color);
+        border: none;
+        color: white;
+        border-radius: 50%;
+        width: 60px;
+        height: 60px;
+        font-size: 24px;
+        cursor: pointer;
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+        transition: background 0.3s ease;
+      }
+
+      #chatbox-toggle:hover {
+        background-color: #4f46e5;
+      }
+
+      /* Chatbox Container */
+      .chatbox {
+        position: fixed;
+        bottom: 90px;
+        right: 20px;
+        width: 360px;
+        height: 500px;
+        background: rgba(255, 255, 255, 0.3);
+        backdrop-filter: blur(15px);
+        border-radius: 1.5rem;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+        display: none;
+        flex-direction: column;
+        z-index: 1040;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        transition: all 0.3s ease-in-out;
+      }
+
+      .chatbox-header {
+        background: rgb(6, 47, 170);
+        color: white;
+        padding: 1rem;
+        font-weight: bold;
+        font-size: 1rem;
+        text-align: center;
+      }
+
+      .chatbox-body {
+        flex: 1;
+        padding: 1rem;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        background: rgba(255, 255, 255, 0.6);
+      }
+      .message-bot.typing {
+        font-style: italic;
+        color: gray;
+      }
+
+      .message-bot.typing::after {
+        content: "...";
+        animation: typing 1.5s steps(3, end) infinite;
+      }
+
+      @keyframes typing {
+        0% {
+          content: "...";
+        }
+        33% {
+          content: ".";
+        }
+        66% {
+          content: "..";
+        }
+        100% {
+          content: "...";
+        }
+      }
+      .message-user,
+      .message-bot {
+        padding: 0.8rem 1.2rem;
+        max-width: 80%;
+        border-radius: 1rem;
+        line-height: 1.4;
+        animation: fadeIn 0.4s ease-in;
+      }
+      .feedback-buttons {
+        display: flex;
+        justify-content: flex-start;
+        gap: 10px;
+        margin-top: 10px;
+      }
+
+      .feedback-button {
+        cursor: pointer;
+        font-size: 24px;
+        color: #6366f1;
+        transition: color 0.3s ease;
+      }
+      .feedback-buttons i {
+        cursor: pointer;
+        font-size: 20px;
+        margin-right: 10px;
+      }
+      .feedback-button:hover {
+        color: #4f46e5;
+      }
+      .message-user {
+        align-self: flex-end;
+        background-color: rgb(10, 27, 80);
+        color: white;
+        border-bottom-right-radius: 0;
+      }
+
+      .message-bot {
+        align-self: flex-start;
+        background-color: #e9ecef;
+        color: #333;
+        border-bottom-left-radius: 0;
+      }
+
+      .chatbox-footer {
+        background: rgb(6, 47, 170);
+        padding: 0.8rem;
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+      }
+.feedback-button.selected.up i {
+  color: green;
+}
+.feedback-button.selected.down i {
+  color: red;
+}
+
+
+      .chatbox-footer input {
+        flex: 1;
+        border-radius: 20px;
+        padding: 0.5rem 1rem;
+        border: none;
+        outline: none;
+      }
+
+      .chatbox-footer .send-button {
+        border-radius: 999px;
+        background-color: rgb(255, 255, 255);
+        color: rgb(5, 8, 80);
+        border: none;
+        padding: 0.5rem 0.9rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+    </style>
+
+    <!-- Firebase SDK (modular) -->
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+      import {
+        getDatabase,
+        ref,
+        set,
+        onValue,
+      } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js";
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyCMl7mjfoB2LqnDzGC8rRnW_Bs2ibEUzZo",
+        authDomain: "chatbot-eddb6.firebaseapp.com",
+        databaseURL: "https://chatbot-eddb6-default-rtdb.firebaseio.com",
+        projectId: "chatbot-eddb6",
+        storageBucket: "chatbot-eddb6.appspot.com",
+        messagingSenderId: "1034472481694",
+        appId: "1:1034472481694:web:ae0640ab3149b99040ec8f",
+        measurementId: "G-P63ZCZ2WRN",
+      };
+
+      const app = initializeApp(firebaseConfig);
+      const database = getDatabase(app);
+const responseMessageMap = {}; // Global dictionary to store user messages by responseId
+
+      // Fonction d'envoi du message
+      function sendMessage(message) {
+        const chatId = Date.now();
+        const dbRef = ref(database, "chat/" + chatId);
+
+        // Sauvegarder le message de l'utilisateur dans la base de données
+        set(dbRef, {
+          message: message,
+          response: "",
+        });
+
+        const chatboxBody = document.getElementById("chatbox-body");
+
+        // Afficher le message de l'utilisateur
+        const userMsg = document.createElement("div");
+        userMsg.className = "message-user";
+        userMsg.textContent = message;
+        chatboxBody.appendChild(userMsg);
+
+        // Ajouter les trois points (en attendant la réponse du bot)
+        const botTypingMsg = document.createElement("div");
+        botTypingMsg.className = "message-bot typing";
+        botTypingMsg.innerHTML = "ISETIA is typing  ...";
+        chatboxBody.appendChild(botTypingMsg);
+
+        chatboxBody.scrollTop = chatboxBody.scrollHeight;
+
+        // Attendre la réponse du bot depuis la base de données
+        onValue(dbRef, (snapshot) => {
+          const data = snapshot.val();
+          if (data.response && data.response !== "") {
+            // Supprimer le message "Bot is typing..." dès que la réponse est reçue
+            botTypingMsg.remove();
+
+            // Afficher la réponse du bot
+            // Afficher la réponse du bot avec feedback
+            const botResponse = data.response;
+            const responseId = "resp_" + Date.now(); // unique ID
+responseMessageMap[responseId] = message; // Save original message with response ID
+
+            const botMsg = document.createElement("div");
+            botMsg.className = "message-bot";
+            botMsg.innerHTML = `
+  <div>${botResponse}</div>
+  <div class="feedback-buttons mt-2">
+    <span class="feedback-button" title="Utile" onclick="handleFeedback('${responseId}', \`${botResponse}\`, 'up')">
+      <i class="bi bi-hand-thumbs-up"></i>
+    </span>
+    <span class="feedback-button" title="Non utile" onclick="handleFeedback('${responseId}', \`${botResponse}\`, 'down')">
+      <i class="bi bi-hand-thumbs-down"></i>
+    </span>
+  </div>
+`;
+            chatboxBody.appendChild(botMsg);
+            chatboxBody.scrollTop = chatboxBody.scrollHeight;
+          }
+        });
+      }
+
+      window.sendMessage = sendMessage;
+     window.handleFeedback = function (responseId, responseText, feedbackType) {
+  console.log("Feedback triggered", responseId, feedbackType);
+
+  const feedbackRef = ref(database, "feedback/" + responseId);
+const originalMessage = responseMessageMap[responseId] || ""; // Retrieve user message
+
+  // Save to Firebase
+  set(feedbackRef, {
+    message: originalMessage,
+    response: responseText,
+    feedback: feedbackType,
+    timestamp: new Date().toISOString()
+  })
+    .then(() => {
+    
+
+      // Highlight the selected button
+      const allButtons = document.querySelectorAll(`[onclick*="${responseId}"]`);
+      allButtons.forEach(btn => btn.classList.remove("selected", "up", "down"));
+
+      const selectedBtn = document.querySelector(
+        `[onclick*="${responseId}"][onclick*="${feedbackType}"]`
+      );
+      if (selectedBtn) {
+        selectedBtn.classList.add("selected", feedbackType);
+      }
+    })
+  ;
+};
+
+    </script>
+  </head>
+  <body>
+    <!-- Navbar -->
+    {% include 'partials/navbar.html' %}
+
+    <!-- Hero Section -->
+    <div class="hero-section">
+      <video autoplay muted loop playsinline>
+        <source
+          src="{{ url_for('static', filename='iset.mp4') }}"
+          type="video/mp4"
+        />
+        Votre navigateur ne supporte pas la vidéo.
+      </video>
+      <div class="hero-content">
+        <h1>Analysez vos données intelligemment</h1>
+        <p>
+          AutoML met la puissance de l’IA entre vos mains, sans écrire une seule
+          ligne de code.
+        </p>
+        <a href="/automl" class="btn btn-glow">Commencer</a>
+      </div>
+    </div>
+
+    <!-- AutoML Section -->
+    <section class="automl-card">
+      <h2 class="fw-bold mb-3">Pourquoi AutoML ?</h2>
+      <p class="text-muted">
+        Exploration automatique des données, modèles optimisés, résultats
+        compréhensibles. L’IA simplifiée pour tous.
+      </p>
+      <a href="/automl" class="btn btn-primary mt-3 px-4 py-2 rounded-pill"
+        >Démarrer maintenant</a
+      >
+    </section>
+
+    {% include 'partials/footer.html' %}
+
+    <!-- Chatbot Button -->
+    <div id="chatbot-button">
+      <img src="{{ url_for('static', filename='bot.gif') }}" alt="Chatbot" />
+    </div>
+
+    <!-- Chatbox -->
+    <div class="chatbox" id="chatbox">
+      <div class="chatbox-header">ISETIA - Assistant intelligent</div>
+      <div class="chatbox-body" id="chatbox-body"></div>
+      <div class="chatbox-footer">
+        <input
+          type="text"
+          id="chatbox-input"
+          placeholder="Écris ton message..."
+        />
+        <button class="send-button" id="chatbox-send">➤</button>
+      </div>
+    </div>
+    <script>
+      // Lorsque le DOM est prêt
+      document.addEventListener("DOMContentLoaded", function () {
+        const sendBtn = document.getElementById("chatbox-send");
+        const input = document.getElementById("chatbox-input");
+
+        sendBtn.addEventListener("click", () => {
+          const message = input.value.trim();
+          if (message !== "") {
+            sendMessage(message); // Appelle la fonction définie dans le module
+            input.value = ""; // Vide le champ après envoi
+          }
+        });
+
+        // Permet d'envoyer avec la touche Entrée
+        input.addEventListener("keydown", function (event) {
+          if (event.key === "Enter") {
+            sendBtn.click();
+          }
+        });
+      });
+    </script>
+
+    <!-- Scripts -->
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+  </body>
+</html>

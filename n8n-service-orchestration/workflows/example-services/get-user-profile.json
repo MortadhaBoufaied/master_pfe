@@ -1,0 +1,54 @@
+{
+  "name": "Get User Profile Service",
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "path": "get-user-profile"
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "const body = $input.all()[0].json;\nconst user_id = body.user_id || 'current_user';\nreturn { user_id, timestamp: new Date().toISOString() };"
+      },
+      "name": "Extract User Info",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=http://backend:8080/api/users/{{ $node.\"Extract User Info\".json.user_id }}"
+      },
+      "name": "Get Profile from Backend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "const profile = $input.all()[0].json;\nreturn {\n  status: 'success',\n  data: {\n    name: profile.name,\n    email: profile.email,\n    phone: profile.phone,\n    created_date: profile.created_at,\n    status: profile.status\n  }\n};"
+      },
+      "name": "Format Profile",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [850, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{"node": "Extract User Info", "branch": 0, "type": "main", "index": 0}]]
+    },
+    "Extract User Info": {
+      "main": [[{"node": "Get Profile from Backend", "branch": 0, "type": "main", "index": 0}]]
+    },
+    "Get Profile from Backend": {
+      "main": [[{"node": "Format Profile", "branch": 0, "type": "main", "index": 0}]]
+    }
+  }
+}

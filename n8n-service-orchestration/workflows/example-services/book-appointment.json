@@ -1,0 +1,62 @@
+{
+  "name": "Book Appointment Service",
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "path": "book-appointment"
+      },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "const body = $input.all()[0].json;\nconst params = body.parameters;\nreturn {\n  service_type: params.service_type,\n  date: params.date,\n  time: params.time,\n  notes: params.notes || '',\n  user_id: body.user_id\n};"
+      },
+      "name": "Extract Booking Details",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://backend:8080/api/appointments",
+        "sendBody": true,
+        "bodyParameters": [
+          { "name": "service_type", "value": "={{ $node.\"Extract Booking Details\".json.service_type }}" },
+          { "name": "date", "value": "={{ $node.\"Extract Booking Details\".json.date }}" },
+          { "name": "time", "value": "={{ $node.\"Extract Booking Details\".json.time }}" },
+          { "name": "notes", "value": "={{ $node.\"Extract Booking Details\".json.notes }}" },
+          { "name": "user_id", "value": "={{ $node.\"Extract Booking Details\".json.user_id }}" }
+        ]
+      },
+      "name": "Create Booking",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "const booking = $input.all()[0].json;\nreturn {\n  status: 'success',\n  data: {\n    booking_id: booking.id,\n    service_type: booking.service_type,\n    date: booking.date,\n    time: booking.time,\n    duration: 30,\n    confirmation_code: booking.confirmation_code\n  }\n};"
+      },
+      "name": "Format Confirmation",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [850, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{"node": "Extract Booking Details", "branch": 0, "type": "main", "index": 0}]]
+    },
+    "Extract Booking Details": {
+      "main": [[{"node": "Create Booking", "branch": 0, "type": "main", "index": 0}]]
+    },
+    "Create Booking": {
+      "main": [[{"node": "Format Confirmation", "branch": 0, "type": "main", "index": 0}]]
+    }
+  }
+}

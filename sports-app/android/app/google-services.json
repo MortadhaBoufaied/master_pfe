@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "701975005589",
+    "project_id": "projet-moez",
+    "storage_bucket": "projet-moez.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:701975005589:android:bf6e05c12a4374a5a60e9c",
+        "android_client_info": {
+          "package_name": "com.example.moez_project"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDInK4WlsO3to_1Omuf9jBXwYf-N20z75g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

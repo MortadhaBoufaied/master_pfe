@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoML Results Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #005792 0%, #003f63 100%);
+        }
+        .chart-container {
+            height: 400px;
+            background-color: white;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="min-h-screen">
+        <!-- Header -->
+        <header class="gradient-bg text-white shadow-lg">
+            <div class="container mx-auto px-4 py-6">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h1 class="text-2xl font-bold"><i class="fas fa-robot mr-2"></i>AutoML Results Dashboard</h1>
+                        <p class="text-blue-100 mt-1">Automated Machine Learning Analysis Report</p>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <span class="px-3 py-1 bg-blue-400 rounded-full text-sm font-semibold">
+                            {{ task }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="container mx-auto px-4 py-8">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Left Column -->
+                <div class="lg:col-span-1 space-y-6">
+                    <!-- Best Model Card -->
+                    <div class="bg-white rounded-xl shadow-md overflow-hidden">
+                        <div class="gradient-bg px-6 py-4">
+                            <h2 class="text-xl font-bold text-white"><i class="fas fa-trophy mr-2"></i>Best Model</h2>
+                        </div>
+                        <div class="p-6">
+                            <div class="space-y-4">
+                                <div>
+                                    <p class="text-gray-500 text-sm">Model Name</p>
+                                    <p class="font-semibold text-lg">{{ best_model_name }}</p>
+                                </div>
+                                <div>
+                                    <p class="text-gray-500 text-sm">Score</p>
+                                    <p class="font-semibold text-blue-600 text-xl">{{ (best_score * 100) | round(2) }}%</p>
+                                </div>
+                                <div>
+                                    <p class="text-gray-500 text-sm">Training Time</p>
+                                    <p class="font-semibold">{{ best_training_time | round(2) }} sec</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Metrics Card -->
+                    <div class="bg-white rounded-xl shadow-md overflow-hidden">
+                        <div class="gradient-bg px-6 py-4">
+                            <h2 class="text-xl font-bold text-white"><i class="fas fa-chart-bar mr-2"></i>Evaluation Metrics</h2>
+                        </div>
+                        <div class="p-6">
+                            <div class="space-y-3">
+                                {% for metric, value in evaluation_metrics.items() %}
+                                <div class="flex justify-between items-center border-b pb-2">
+                                    <span class="text-gray-600">{{ metric }}</span>
+                                    <span class="font-semibold">{{ value | round(4) if value is not none else 'N/A' }}</span>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Download Report -->
+                    <div class="bg-white rounded-xl shadow-md overflow-hidden">
+                        <div class="gradient-bg px-6 py-4">
+                            <h2 class="text-xl font-bold text-white"><i class="fas fa-file-pdf mr-2"></i>Export Report</h2>
+                        </div>
+                        <div class="p-6">
+                            <form action="{{ url_for('download_report') }}" method="POST">
+                                <input type="hidden" name="task" value="{{ task }}">
+                                <button type="submit" class="w-full flex items-center justify-center px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition duration-200">
+                                    <i class="fas fa-download mr-2"></i> Download PDF Report
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+<div class="lg:col-span-2 space-y-6">
+    <div class="bg-white rounded-xl shadow-md overflow-hidden">
+        <div class="px-6 py-4 gradient-bg">
+            <h2 class="text-xl font-bold text-white flex items-center">
+                <i class="fas fa-tasks mr-2"></i>Model Comparison
+            </h2>
+        </div>
+        <div class="p-6">
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200 rounded-md shadow-sm">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Model
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Training Time (sec)
+                            </th>
+                            {% if task == 'classification' %}
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Accuracy
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                ROC AUC
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Precision
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Recall
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                F1 Score
+                            </th>
+                            {% elif task == 'regression' %}
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                MSE
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                R² Score
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                MAE
+                            </th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                     {% for result in all_model_results %}
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm font-medium text-gray-900">{{ result.name }}</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-500">{{ result.training_time | round(2) }}</div>
+                            </td>
+                            {% if task == 'classification' %}
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-blue-600 font-semibold">{{ (result.accuracy * 100) | round(2) }}%</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-blue-600 font-semibold">{{ (result.roc_auc * 100) | round(2) }}%</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-blue-600 font-semibold">{{ (result.precision * 100) | round(2) }}%</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-blue-600 font-semibold">{{ (result.recall * 100) | round(2) }}%</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-blue-600 font-semibold">{{ (result.f1 * 100) | round(2) }}%</div>
+                            </td>
+                            {% elif task == 'regression' %}
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-red-600 font-semibold">{{ result.mse | round(4) }}</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-green-600 font-semibold">{{ result.r2 | round(4) }}</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-yellow-600 font-semibold">{{ result.mae | round(4) }}</div>
+                            </td>
+                            {% endif %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .comparison-table {
+        width: 100%;
+        border-collapse: collapse;
+        border-radius: 0.5rem;
+        overflow: hidden;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    .comparison-table thead th {
+        background-color: #f3f4f6;
+        color: #4b5563;
+        padding: 1rem;
+        text-align: left;
+        font-weight: 600;
+        font-size: 0.875rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    .comparison-table tbody td {
+        padding: 1rem;
+        font-size: 0.875rem;
+        color: #374151;
+    }
+
+    .comparison-table tbody tr:nth-child(even) {
+        background-color: #f9fafb;
+    }
+
+    .comparison-table tbody tr:hover {
+        background-color: #edf2f7;
+    }
+</style>
+                <!-- Right Column (Charts) -->
+                <div class="lg:col-span-2 space-y-6">
+                    {% if feature_importance_path %}
+                    <div class="chart-container">
+                        <div class="flex items-center mb-4">
+                            <i class="fas fa-star text-yellow-500 mr-2 text-xl"></i>
+                            <h3 class="text-lg font-semibold">Feature Importance</h3>
+                        </div>
+                        <img src="{{ url_for('static', filename=feature_importance_path) }}" alt="Feature Importance" class="w-full h-full object-contain">
+                    </div>
+                    {% endif %}
+
+                    {% if roc_curve_path %}
+                    <div class="chart-container">
+                        <div class="flex items-center mb-4">
+                            <i class="fas fa-chart-line text-blue-500 mr-2 text-xl"></i>
+                            <h3 class="text-lg font-semibold">ROC Curve</h3>
+                        </div>
+                        <img src="{{ url_for('static', filename=roc_curve_path) }}" alt="ROC Curve" class="w-full h-full object-contain">
+                    </div>
+                    {% endif %}
+
+                    {% if shap_plot_path %}
+                    <div class="chart-container">
+                        <div class="flex items-center mb-4">
+                            <i class="fas fa-search text-purple-500 mr-2 text-xl"></i>
+                            <h3 class="text-lg font-semibold">SHAP Explanation</h3>
+                        </div>
+                        <img src="{{ url_for('static', filename=shap_plot_path) }}" alt="SHAP Summary" class="w-full h-full object-contain">
+                    </div>
+                    {% endif %}
+
+                    {% if pred_vs_actual_path %}
+                    <div class="chart-container">
+                        <div class="flex items-center mb-4">
+                            <i class="fas fa-project-diagram text-green-500 mr-2 text-xl"></i>
+                            <h3 class="text-lg font-semibold">Predictions vs Actual</h3>
+                        </div>
+                        <img src="{{ url_for('static', filename=pred_vs_actual_path) }}" alt="Predicted vs Actual" class="w-full h-full object-contain">
+                    </div>
+                    {% endif %}
+
+                    {% if residual_plot_path %}
+                    <div class="chart-container">
+                        <div class="flex items-center mb-4">
+                            <i class="fas fa-chart-area text-red-500 mr-2 text-xl"></i>
+                            <h3 class="text-lg font-semibold">Residual Analysis</h3>
+                        </div>
+                        <img src="{{ url_for('static', filename=residual_plot_path) }}" alt="Residual Plot" class="w-full h-full object-contain">
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

@@ -1,0 +1,31 @@
+Django==5.2.1
+asgiref==3.8.1
+sqlparse==0.5.3
+tzdata==2025.2
+
+# Data & ML
+pandas>=2.2
+numpy>=1.26
+scikit-learn>=1.5
+rapidfuzz>=3.13.0
+
+# Caching & Performance
+redis>=5.0.0
+
+# Testing & Quality
+pytest>=7.0.0
+pytest-django>=4.5.0
+pytest-cov>=4.0.0
+coverage>=7.0.0
+
+# Development
+black>=23.0.0
+flake8>=6.0.0
+isort>=5.12.0
+
+# Production
+gunicorn>=21.0.0
+python-decouple>=3.8
+
+# Monitoring (Optional)
+django-prometheus>=2.2.0

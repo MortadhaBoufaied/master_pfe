@@ -1,0 +1,5 @@
+Question;Answer;Category;Intent_ID
+What are the fees?;Annual fee is 1200 TND.;Fees;fees_info
+Training hours?;Mon-Fri 16:00-18:00.;Schedule;training_hours
+What is the platform?;This is a football academy platform.;General;platform_info
+How to register?;Visit our website.;Registration;register_info

@@ -1,0 +1,109 @@
+{
+  "version": "1.0.0",
+  "response_templates": {
+    "profile_card": {
+      "template": "📋 **Your Profile**\n\n**Name:** {name}\n**Email:** {email}\n**Phone:** {phone}\n**Member Since:** {created_date}\n**Status:** {status}\n\n---\n*Need to update your profile? Let me know!*",
+      "format": "markdown",
+      "fallback": "Unable to retrieve profile information."
+    },
+    "booking_confirmation": {
+      "template": "✅ **Booking Confirmed!**\n\n**Service:** {service_type}\n**Date:** {date}\n**Time:** {time}\n**Booking ID:** {booking_id}\n**Duration:** {duration} minutes\n\n---\n📧 A confirmation has been sent to your email.\n🔔 You'll receive a reminder 24 hours before your appointment.",
+      "format": "markdown",
+      "fallback": "Booking could not be completed. Please try again."
+    },
+    "booking_error": {
+      "template": "❌ **Booking Failed**\n\n**Reason:** {error_message}\n**Suggested Action:** {suggestion}\n\nWould you like to try another time or date?",
+      "format": "markdown",
+      "fallback": "An error occurred while booking."
+    },
+    "schedule_list": {
+      "template": "📅 **Available Time Slots for {service_type}**\n\n{slots_table}\n\n---\n**Duration:** {duration} minutes\n**Looking for:** Next {days_ahead} days\n\nJust let me know which time works best for you!",
+      "format": "markdown",
+      "fallback": "No available slots found."
+    },
+    "schedule_error": {
+      "template": "❌ **Unable to fetch schedule**\n\nPlease try again later or contact support.",
+      "format": "markdown",
+      "fallback": "Error retrieving schedule."
+    },
+    "feedback_confirmation": {
+      "template": "✅ **Thank You for Your Feedback!**\n\n**Feedback ID:** {feedback_id}\n**Category:** {category}\n**Rating:** {rating}/5 ⭐\n\n---\nWe appreciate your input and will use it to improve our services.",
+      "format": "markdown",
+      "fallback": "Feedback submitted successfully."
+    },
+    "feedback_error": {
+      "template": "❌ **Unable to submit feedback**\n\nPlease try again later.",
+      "format": "markdown",
+      "fallback": "Error submitting feedback."
+    },
+    "payment_status": {
+      "template": "💳 **Payment Information**\n\n**Status:** {status}\n**Total Amount:** ${amount}\n**Due Date:** {due_date}\n**Payment Method:** {payment_method}\n\n{payment_details}\n\n---\n{action_needed}",
+      "format": "markdown",
+      "fallback": "Unable to retrieve payment status."
+    },
+    "payment_error": {
+      "template": "❌ **Unable to retrieve payment information**\n\nPlease contact our support team.",
+      "format": "markdown",
+      "fallback": "Error retrieving payment status."
+    },
+    "cancellation_confirmation": {
+      "template": "✅ **Appointment Cancelled**\n\n**Appointment ID:** {appointment_id}\n**Service:** {service_type}\n**Previous Date:** {original_date}\n\n---\nIf you'd like to reschedule, I can help you find another time slot.",
+      "format": "markdown",
+      "fallback": "Cancellation completed."
+    },
+    "cancellation_error": {
+      "template": "❌ **Unable to cancel appointment**\n\n**Reason:** {error_message}\n\nPlease try again or contact support.",
+      "format": "markdown",
+      "fallback": "Error cancelling appointment."
+    },
+    "service_details": {
+      "template": "ℹ️ **{service_name}**\n\n**Description:** {description}\n**Price:** {price}\n**Duration:** {duration}\n**Availability:** {availability}\n\n---\n{additional_info}\n\nWould you like to book this service?",
+      "format": "markdown",
+      "fallback": "Service details not available."
+    },
+    "service_not_found": {
+      "template": "❌ **Service not found**\n\nI couldn't find a service with that name. Here are our available services:\n\n{available_services}\n\nWhich one interests you?",
+      "format": "markdown",
+      "fallback": "Service not found."
+    },
+    "order_tracking": {
+      "template": "📦 **Order Tracking**\n\n**Order ID:** {order_id}\n**Status:** {status}\n**Progress:** {progress}%\n**Estimated Delivery:** {estimated_delivery}\n\n---\n{status_details}\n\nTracking Number: {tracking_number}",
+      "format": "markdown",
+      "fallback": "Order tracking information not available."
+    },
+    "order_not_found": {
+      "template": "❌ **Order not found**\n\nI couldn't find an order with ID: {order_id}\n\nPlease check the order ID and try again.",
+      "format": "markdown",
+      "fallback": "Order not found."
+    },
+    "faq_list": {
+      "template": "❓ **Frequently Asked Questions**\n\n{faq_items}\n\n---\nDid this help? Ask me anything else!",
+      "format": "markdown",
+      "fallback": "FAQ not available."
+    },
+    "faq_not_found": {
+      "template": "❌ **No FAQ found**\n\nI couldn't find answers to your question. Please contact our support team.",
+      "format": "markdown",
+      "fallback": "FAQ not found."
+    },
+    "error_default": {
+      "template": "⚠️ **Something went wrong**\n\n**Error:** {error_message}\n**Reference ID:** {reference_id}\n\nPlease try again or contact support if the problem persists.",
+      "format": "markdown",
+      "fallback": "An error occurred."
+    },
+    "service_timeout": {
+      "template": "⏱️ **Request Timeout**\n\nThe service took too long to respond. This might be a temporary issue.\n\n**What to do:**\n- Try again in a few moments\n- Contact support if the problem persists\n\nReference ID: {reference_id}",
+      "format": "markdown",
+      "fallback": "Request timeout."
+    },
+    "multiple_services_response": {
+      "template": "🔄 **Executing Multiple Services**\n\n{services_results}\n\n---\n**Overall Status:** {overall_status}\n**Execution Time:** {execution_time_ms}ms",
+      "format": "markdown",
+      "fallback": "Multiple services executed."
+    }
+  },
+  "templates_by_response_type": {
+    "success": ["profile_card", "booking_confirmation", "schedule_list", "feedback_confirmation", "payment_status", "cancellation_confirmation", "service_details", "order_tracking", "faq_list"],
+    "error": ["booking_error", "schedule_error", "feedback_error", "payment_error", "cancellation_error", "service_not_found", "order_not_found", "faq_not_found", "error_default", "service_timeout"]
+  }
+}

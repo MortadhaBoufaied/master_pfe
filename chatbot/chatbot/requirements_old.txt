@@ -1,0 +1,9 @@
+Django==5.2.1
+asgiref==3.8.1
+sqlparse==0.5.3
+tzdata==2025.2
+
+pandas>=2.2
+numpy>=1.26
+scikit-learn>=1.5
+rapidfuzz>=3.13.0

@@ -1,0 +1,80 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: n8n-postgres
+    environment:
+      POSTGRES_USER: ${N8N_DB_USER:-n8n}
+      POSTGRES_PASSWORD: ${N8N_DB_PASSWORD:-change_me}
+      POSTGRES_DB: ${N8N_DB_NAME:-n8n}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${N8N_DB_USER:-n8n}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - n8n-network
+
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n
+    environment:
+      DB_TYPE: postgres
+      DB_POSTGRESDB_HOST: postgres
+      DB_POSTGRESDB_PORT: 5432
+      DB_POSTGRESDB_DATABASE: ${N8N_DB_NAME:-n8n}
+      DB_POSTGRESDB_USER: ${N8N_DB_USER:-n8n}
+      DB_POSTGRESDB_PASSWORD: ${N8N_DB_PASSWORD:-change_me}
+      N8N_HOST: 0.0.0.0
+      N8N_PORT: ${N8N_PORT:-5678}
+      N8N_PROTOCOL: http
+      NODE_ENV: production
+      WEBHOOK_URL: ${N8N_WEBHOOK_URL:-http://localhost:5678}
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:-use_a_strong_key}
+      N8N_LOG_LEVEL: ${LOG_LEVEL:-info}
+      # Optional: API key for security
+      N8N_AUTH_EXCLUDE_ENDPOINTS: /webhook/,/healthz
+    ports:
+      - "${N8N_PORT:-5678}:5678"
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./workflows:/home/node/.n8n/workflows:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - n8n-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${N8N_PORT:-5678}/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Optional: Redis for distributed caching
+  redis:
+    image: redis:7-alpine
+    container_name: n8n-redis
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - n8n-network
+    profiles:
+      - redis  # Include only if needed: docker-compose --profile redis up
+
+volumes:
+  postgres_data:
+  n8n_data:
+  redis_data:
+
+networks:
+  n8n-network:
+    driver: bridge
