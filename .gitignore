@@ -1,0 +1,10 @@
+# Firebase/GCP Credentials
+**/chatbot-eddb6-firebase-adminsdk-fbsvc-f7373bcd72.json
+chatbot/**/chatbot-eddb6-firebase-adminsdk-*.json
+
+# Sensitive files
+chatbot/chatbot/chatbot.txt
+**/secrets.json
+**/credentials.json
+**/.env
+**/.env.local
