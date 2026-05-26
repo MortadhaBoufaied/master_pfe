@@ -5,7 +5,7 @@ import json
 import asyncio
 import httpx
 from typing import Dict, List, Optional, Any
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -47,7 +47,7 @@ class ServiceExecutor:
             'service_id': service_id,
             'parameters': parameters,
             'user_id': user_id,
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': datetime.now(timezone.utc).isoformat(),
             'request_id': self._generate_request_id()
         }
         
@@ -68,7 +68,7 @@ class ServiceExecutor:
                         'error_details': response.text
                     }
         
-        except asyncio.TimeoutError:
+        except (asyncio.TimeoutError, httpx.TimeoutException):
             return {
                 'status': 'error',
                 'error': 'Service execution timeout',

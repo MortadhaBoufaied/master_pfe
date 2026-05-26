@@ -1,0 +1,362 @@
+{
+  "iteration_number": 1,
+  "date": "2026-05-25T22:45:00+01:00",
+  "focus_area": "Repository discovery, baseline tests, static/security scan",
+  "priority": "critical",
+  "scope": {
+    "root": "D:/Nouveau dossier",
+    "services_found": [
+      {
+        "service": "sports_management_project",
+        "type": "Spring Boot backend",
+        "languages": ["Java"],
+        "build_tools": ["Maven"],
+        "manifest": "sports_management_project/pom.xml",
+        "source_files": 407,
+        "source_lines": 35698
+      },
+      {
+        "service": "sports-app",
+        "type": "Flutter mobile app",
+        "languages": ["Dart"],
+        "build_tools": ["Flutter"],
+        "manifest": "sports-app/pubspec.yaml",
+        "source_files": 202,
+        "source_lines": 43621
+      },
+      {
+        "service": "scouting-ai-service",
+        "type": "FastAPI scouting AI service",
+        "languages": ["Python"],
+        "build_tools": ["pip"],
+        "manifest": "scouting-ai-service/requirements.txt",
+        "source_files": 41,
+        "source_lines": 3454
+      },
+      {
+        "service": "academy-ranking-ai-service",
+        "type": "FastAPI academy ranking service",
+        "languages": ["Python"],
+        "build_tools": ["pip"],
+        "manifest": "academy-ranking-ai-service/requirements.txt",
+        "source_files": 9,
+        "source_lines": 347
+      },
+      {
+        "service": "n8n-service-orchestration",
+        "type": "N8N orchestration support code",
+        "languages": ["Python", "JSON", "YAML"],
+        "build_tools": ["pip", "Docker Compose"],
+        "manifest": "n8n-service-orchestration/requirements.txt",
+        "source_files": 6,
+        "source_lines": 1080
+      },
+      {
+        "service": "chatbot",
+        "type": "Django chatbot and AutoML app",
+        "languages": ["Python"],
+        "build_tools": ["pip"],
+        "manifests": [
+          "chatbot/chatbot/requirements.txt",
+          "chatbot/AutoMl/automl_app/requirements.txt"
+        ],
+        "source_files": 62,
+        "source_lines": 27983
+      }
+    ],
+    "test_files": {
+      "spring_active": 3,
+      "spring_disabled": 10,
+      "python": 5,
+      "flutter": 1
+    },
+    "docker_files": [
+      "sports_management_project/Dockerfile",
+      "sports_management_project/docker-compose.yml",
+      "sports_management_project/docker-compose.dev.yml",
+      "scouting-ai-service/Dockerfile",
+      "scouting-ai-service/docker-compose.yml",
+      "n8n-service-orchestration/docker-compose.yml"
+    ]
+  },
+  "commands": [
+    {
+      "command": "Get-ChildItem -Recurse -File -Include pom.xml,requirements.txt,pubspec.yaml,Dockerfile,docker-compose*.yml",
+      "status": "passed",
+      "notes": "Found Maven, pip, Flutter, Dockerfile and Compose manifests."
+    },
+    {
+      "command": "mvn -q -DskipTests compile",
+      "cwd": "sports_management_project",
+      "status": "passed"
+    },
+    {
+      "command": "mvn -q test -DskipITs",
+      "cwd": "sports_management_project",
+      "status": "passed",
+      "tests": {"run": 3, "passed": 3, "failed": 0, "skipped": 0}
+    },
+    {
+      "command": "mvn checkstyle:check -DskipTests",
+      "cwd": "sports_management_project",
+      "status": "failed",
+      "summary": "23034 checkstyle findings across 386 Java files; mostly missing Javadocs, line length, final-parameter rules and brace style."
+    },
+    {
+      "command": "mvn checkstyle:check spotbugs:check -DskipTests",
+      "cwd": "sports_management_project",
+      "status": "failed",
+      "summary": "spotbugs goal is only configured in the Maven analysis profile, so the direct prefix command fails."
+    },
+    {
+      "command": "python -m pytest tests -v",
+      "cwd": "scouting-ai-service",
+      "status": "blocked",
+      "summary": "Python 3.12.9 is installed, but pytest is not installed in the active interpreter."
+    },
+    {
+      "command": "python -m pytest tests -v",
+      "cwd": "academy-ranking-ai-service",
+      "status": "blocked",
+      "summary": "Python 3.12.9 is installed, but pytest is not installed in the active interpreter."
+    },
+    {
+      "command": "python -m compileall -q app tests",
+      "cwd": "scouting-ai-service",
+      "status": "passed"
+    },
+    {
+      "command": "python -m compileall -q app tests",
+      "cwd": "academy-ranking-ai-service",
+      "status": "passed"
+    },
+    {
+      "command": "python -m compileall -q webhooks tests chatbot-integration",
+      "cwd": "n8n-service-orchestration",
+      "status": "passed"
+    },
+    {
+      "command": "python -m compileall -q apps chatbot",
+      "cwd": "chatbot/chatbot",
+      "status": "passed"
+    },
+    {
+      "command": "flutter analyze",
+      "cwd": "sports-app",
+      "status": "failed",
+      "summary": "808 analyzer findings: 90 warnings, 718 info, 0 errors. Raw output saved to production-audit/flutter-analyze.txt."
+    },
+    {
+      "command": "flutter test --reporter compact",
+      "cwd": "sports-app",
+      "status": "failed",
+      "tests": {"run": 1, "passed": 0, "failed": 1},
+      "summary": "Default counter smoke test expects text 0/1 and plus icon; current app no longer contains that UI."
+    }
+  ],
+  "findings": [
+    {
+      "id": "FIND-001",
+      "severity": "critical",
+      "title": "Hardcoded production-like secrets in Spring configuration",
+      "evidence": [
+        "sports_management_project/src/main/resources/application.properties:52",
+        "sports_management_project/src/main/resources/application.properties:58"
+      ],
+      "root_cause": "jwt.secret and stripe.secret.key are fixed literals in versioned application properties.",
+      "impact": "A leaked repository or deployed artifact compromises token signing and payment-service credentials.",
+      "recommended_fix": "Require JWT and Stripe secrets from environment variables, fail fast if missing outside local profile, and rotate any exposed values."
+    },
+    {
+      "id": "FIND-002",
+      "severity": "critical",
+      "title": "AI service authentication disables itself when token env var is empty",
+      "evidence": [
+        "scouting-ai-service/app/core/service_auth.py:9",
+        "academy-ranking-ai-service/app/core/auth.py:7"
+      ],
+      "root_cause": "Auth dependency returns success if the expected shared token is unset.",
+      "impact": "Misconfigured production services can expose inference endpoints without service authentication.",
+      "recommended_fix": "Introduce explicit dev-only auth bypass and fail closed in prod; migrate to expiring service JWT or mTLS."
+    },
+    {
+      "id": "FIND-003",
+      "severity": "critical",
+      "title": "Seed dataset with known admin passwords is packaged with backend resources",
+      "evidence": [
+        "sports_management_project/src/main/resources/Files/Data/data.json:1",
+        "sports_management_project/src/main/resources/application.properties:46"
+      ],
+      "root_cause": "Large demo seed data is stored under runtime resources and includes known accounts/passwords.",
+      "impact": "Production artifact may leak realistic PII-like seed data and known credentials.",
+      "recommended_fix": "Move demo seeds outside packaged resources or exclude them from production builds; ensure seed import cannot run in prod."
+    },
+    {
+      "id": "FIND-004",
+      "severity": "critical",
+      "title": "CSRF disabled while admin web flow uses cookie tokens",
+      "evidence": [
+        "sports_management_project/src/main/java/com/footballacademy/config/jwt/SecurityConfig.java:41",
+        "sports_management_project/src/main/java/com/footballacademy/controllers_rest/auth/AuthController.java:145"
+      ],
+      "root_cause": "Single security chain disables CSRF globally for both REST and cookie-driven admin flows.",
+      "impact": "Authenticated browser sessions are more exposed to state-changing cross-site requests.",
+      "recommended_fix": "Separate stateless API and web-admin security chains or enable CSRF for cookie-authenticated routes."
+    },
+    {
+      "id": "FIND-005",
+      "severity": "high",
+      "title": "Python service tests cannot run in clean local environment",
+      "evidence": [
+        "python -m pytest tests -v returned: No module named pytest"
+      ],
+      "root_cause": "No checked-in virtualenv/bootstrap script or CI baseline command installs test dependencies first.",
+      "impact": "FastAPI and N8N contract reliability cannot be proven from the repository alone.",
+      "recommended_fix": "Add per-service test bootstrap scripts or a root CI workflow that creates isolated venvs and installs requirements."
+    },
+    {
+      "id": "FIND-006",
+      "severity": "high",
+      "title": "Flutter test suite is stale and failing",
+      "evidence": [
+        "sports-app/test/widget_test.dart:13",
+        "flutter test --reporter compact failed 0/1"
+      ],
+      "root_cause": "Default counter-template smoke test remains after app evolved into an authenticated academy app.",
+      "impact": "Mobile CI cannot protect auth, navigation, admin/scouting, or offline flows.",
+      "recommended_fix": "Replace template test with auth splash/login smoke tests and mock API storage/network dependencies."
+    },
+    {
+      "id": "FIND-007",
+      "severity": "high",
+      "title": "Static analysis is not production-ready",
+      "evidence": [
+        "mvn checkstyle:check found 23034 findings",
+        "flutter analyze found 808 issues",
+        "pylint, bandit, safety, trufflehog are not installed in the active environment"
+      ],
+      "root_cause": "Quality gates exist partially but are not curated, normalized, or enforced across services.",
+      "impact": "CI would either fail noisily or skip important SAST/security checks.",
+      "recommended_fix": "Create practical CI gates: compile/tests first, then scoped lint baselines with incremental enforcement."
+    },
+    {
+      "id": "FIND-008",
+      "severity": "high",
+      "title": "Outbound service calls lack a unified resilience layer",
+      "evidence": [
+        "sports_management_project/src/main/java/com/footballacademy/services/scouting/ScoutingAiService.java:184",
+        "sports_management_project/src/main/java/com/footballacademy/services/scouting/AcademyRankingAgentClient.java:45",
+        "sports_management_project/src/main/java/com/footballacademy/services/webhook/WebhookService.java:30",
+        "n8n-service-orchestration/webhooks/service_executor.py:55"
+      ],
+      "root_cause": "Each client creates its own HTTP client; some set timeouts, but there is no shared retry/circuit-breaker/correlation policy.",
+      "impact": "Slow or failing dependencies can cascade into user-facing latency and inconsistent errors.",
+      "recommended_fix": "Add shared HTTP client policies: timeouts, bounded retry, circuit breaker, fallback, and correlation ID forwarding."
+    },
+    {
+      "id": "FIND-009",
+      "severity": "high",
+      "title": "Observability is incomplete and inconsistent",
+      "evidence": [
+        "sports_management_project/pom.xml has no spring-boot-starter-actuator dependency",
+        "No Prometheus/OpenTelemetry configuration found in service manifests",
+        "Only ad-hoc tracing endpoint references found in Spring"
+      ],
+      "root_cause": "Services expose some health/logging pieces but no cross-service observability standard.",
+      "impact": "Production incidents will be hard to correlate across mobile, Spring, FastAPI, N8N and chatbot.",
+      "recommended_fix": "Add correlation ID middleware/filters everywhere, structured JSON logs, metrics endpoints and trace propagation."
+    },
+    {
+      "id": "FIND-010",
+      "severity": "high",
+      "title": "Service contracts and endpoint inventory are not enforced",
+      "evidence": [
+        "Spring has 499 controller mappings",
+        "Scouting AI has 30+ FastAPI route declarations",
+        "Academy ranking AI has 2 FastAPI route declarations",
+        "Django chatbot exposes chat, health, metrics and auth-test URLs"
+      ],
+      "root_cause": "OpenAPI exists for Spring and FastAPI by framework, but there is no generated contract test or version compatibility gate.",
+      "impact": "Backend payload changes can silently break FastAPI services or mobile clients.",
+      "recommended_fix": "Generate OpenAPI specs in CI and add contract tests for Spring-to-AI and mobile-to-Spring critical flows."
+    }
+  ],
+  "lint_sast_results": {
+    "spring_checkstyle": {
+      "status": "failed",
+      "findings": 23034,
+      "files": 386,
+      "top_categories": [
+        "Missing package-info.java",
+        "Missing Javadocs",
+        "Line length over 80",
+        "FinalParameters",
+        "HiddenField",
+        "NeedBraces"
+      ]
+    },
+    "flutter_analyze": {
+      "status": "failed",
+      "total": 808,
+      "warnings": 90,
+      "info": 718,
+      "errors": 0,
+      "raw_artifact": "production-audit/flutter-analyze.txt"
+    },
+    "python_lint_sast": {
+      "status": "not_run",
+      "reason": "pylint, bandit, safety and trufflehog are missing from active environment."
+    },
+    "manual_secret_scan": {
+      "status": "completed",
+      "artifact": "production-audit/secret-scan-baseline.txt",
+      "confirmed_high_risk_hits": 5
+    }
+  },
+  "test_results": {
+    "sports_management_project": {"status": "passed", "tests": 3, "passed": 3, "failed": 0},
+    "scouting-ai-service": {"status": "blocked", "reason": "pytest not installed", "compileall": "passed"},
+    "academy-ranking-ai-service": {"status": "blocked", "reason": "pytest not installed", "compileall": "passed"},
+    "n8n-service-orchestration": {"status": "blocked", "reason": "pytest not installed", "compileall": "passed"},
+    "chatbot": {"status": "blocked", "reason": "pytest not installed", "compileall": "passed"},
+    "sports-app": {"status": "failed", "tests": 1, "passed": 0, "failed": 1}
+  },
+  "architecture": {
+    "artifact": "production-audit/architecture-map.md",
+    "spring_controller_mappings": 499,
+    "primary_call_graph": [
+      "sports-app -> sports_management_project REST/JWT",
+      "sports-app -> sports_management_project STOMP/WebSocket",
+      "sports_management_project -> scouting-ai-service X-Scouting-Service-Token",
+      "sports_management_project -> academy-ranking-ai-service X-Service-Token",
+      "sports_management_project -> external webhooks via WebhookService",
+      "chatbot -> n8n-service-orchestration/webhooks via HTTP",
+      "n8n-service-orchestration -> backend/service webhooks via HTTP",
+      "FastAPI services -> optional backend pull clients in legacy/scouting admin code"
+    ]
+  },
+  "fixes_implemented": [
+    {
+      "id": "FIX-001",
+      "type": "artifact",
+      "title": "Created Iteration 1 production audit artifacts",
+      "files": [
+        "production-audit/iteration-001-report.json",
+        "production-audit/iteration-001-summary.md",
+        "production-audit/architecture-map.md",
+        "production-audit/master-findings.md",
+        "production-audit/secret-scan-baseline.txt",
+        "production-audit/flutter-analyze.txt"
+      ],
+      "breaking": false
+    }
+  ],
+  "next_steps": [
+    "Iteration 2: fix hardcoded Spring secrets and seed packaging risk with safe env defaults.",
+    "Iteration 3: make FastAPI service-token auth fail closed in prod and add auth tests.",
+    "Iteration 4: replace stale Flutter widget test with auth splash/login smoke test.",
+    "Iteration 5: create isolated Python test bootstrap and run FastAPI/N8N/Django tests.",
+    "Iteration 6: add correlation ID propagation to Spring and FastAPI service calls."
+  ],
+  "convergence_status": "Baseline complete; production readiness is low until critical security/configuration findings are fixed."
+}

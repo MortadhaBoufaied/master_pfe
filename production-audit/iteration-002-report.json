@@ -1,0 +1,232 @@
+{
+  "iteration_number": 2,
+  "date": "2026-05-26T13:21:36+01:00",
+  "focus_area": "Critical security burn-down, test restoration, and SAST baseline",
+  "priority": "critical",
+  "findings": [
+    {
+      "id": "FIND-001",
+      "severity": "critical",
+      "title": "Spring JWT and Stripe secrets were committed as fixed literals",
+      "evidence": [
+        "sports_management_project/src/main/resources/application.properties:52",
+        "sports_management_project/src/main/resources/application.properties:58",
+        "sports_management_project/src/main/java/com/footballacademy/services/auth/JwtService.java:22"
+      ],
+      "root_cause": "Production defaults embedded sensitive key material in source configuration.",
+      "recommended_fix": "Read JWT_SECRET and STRIPE_SECRET_KEY from the runtime environment and fail fast when JWT_SECRET is missing."
+    },
+    {
+      "id": "FIND-002",
+      "severity": "critical",
+      "title": "FastAPI service-token authentication failed open outside configured secrets",
+      "evidence": [
+        "scouting-ai-service/app/core/service_auth.py:6",
+        "academy-ranking-ai-service/app/core/auth.py:6"
+      ],
+      "root_cause": "Missing token configuration skipped auth checks.",
+      "recommended_fix": "Permit missing tokens only in explicit dev/local/test mode; return 503 in production-like environments."
+    },
+    {
+      "id": "FIND-003",
+      "severity": "critical",
+      "title": "Demo seed data with known admin passwords was packaged with backend resources",
+      "evidence": [
+        "sports_management_project/src/main/resources/Files/Data/data.json:1",
+        "sports_management_project/pom.xml:172",
+        "Verification: target/classes/Files/Data/data.json is absent after clean build"
+      ],
+      "root_cause": "Large demo import file lived under src/main/resources without an artifact exclusion.",
+      "recommended_fix": "Exclude the demo file from production artifacts and load it only by explicit external seed path."
+    },
+    {
+      "id": "FIND-011",
+      "severity": "high",
+      "title": "N8N service intent matcher produced a false positive for general chat",
+      "evidence": [
+        "Before: tests/test_service_detector.py::test_detect_no_service failed; 'Tell me a joke' matched submit-feedback",
+        "n8n-service-orchestration/service-registry/service_matcher.py:13",
+        "n8n-service-orchestration/service-registry/service_matcher.py:120"
+      ],
+      "root_cause": "Short fuzzy keyword 'tell us' scored 72.7 against unrelated text and exceeded the 70 threshold.",
+      "recommended_fix": "Use boundary-aware exact matching and skip fuzzy scoring for very short keywords."
+    },
+    {
+      "id": "FIND-012",
+      "severity": "high",
+      "title": "Flutter smoke test was stale counter-template coverage",
+      "evidence": [
+        "sports-app/test/widget_test.dart:7",
+        "Before: expected counter text and plus icon in an app that no longer has counter UI"
+      ],
+      "root_cause": "Default Flutter template test was never replaced with app-specific shell coverage.",
+      "recommended_fix": "Assert the actual unauthenticated app shell renders."
+    }
+  ],
+  "fixes_implemented": [
+    {
+      "id": "FIX-001",
+      "finding_id": "FIND-001",
+      "type": "code",
+      "title": "Move backend secrets to environment variables and fail fast for JWT",
+      "files": [
+        "sports_management_project/src/main/resources/application.properties",
+        "sports_management_project/src/main/java/com/footballacademy/services/auth/JwtService.java"
+      ],
+      "changes": [
+        "jwt.secret now resolves from JWT_SECRET with no committed fallback",
+        "stripe.secret.key now resolves from STRIPE_SECRET_KEY with no committed fallback",
+        "JwtService validates JWT_SECRET at startup and requires at least 256 bits"
+      ],
+      "breaking": true,
+      "migration_path": "Set JWT_SECRET before starting backend. Set STRIPE_SECRET_KEY before using payment endpoints."
+    },
+    {
+      "id": "FIX-002",
+      "finding_id": "FIND-002",
+      "type": "code_and_tests",
+      "title": "Make FastAPI service auth fail closed outside dev/test",
+      "files": [
+        "scouting-ai-service/app/core/service_auth.py",
+        "scouting-ai-service/tests/test_service_auth.py",
+        "academy-ranking-ai-service/app/core/auth.py",
+        "academy-ranking-ai-service/app/core/config.py",
+        "academy-ranking-ai-service/tests/test_service_auth.py"
+      ],
+      "changes": [
+        "Missing service token is allowed only for dev/local/test",
+        "Production-like missing token returns HTTP 503",
+        "Invalid token returns HTTP 401",
+        "Token comparison now uses constant-time compare_digest",
+        "Added regression tests for missing, invalid, and valid token paths"
+      ],
+      "breaking": false,
+      "migration_path": "Set SCOUTING_SERVICE_TOKEN and ACADEMY_RANKING_AI_SERVICE_TOKEN in non-dev environments."
+    },
+    {
+      "id": "FIX-003",
+      "finding_id": "FIND-003",
+      "type": "build_config",
+      "title": "Exclude packaged demo seed data from backend resources",
+      "files": [
+        "sports_management_project/pom.xml"
+      ],
+      "changes": [
+        "Added resource exclusion for Files/Data/data.json",
+        "Verified a clean Maven build does not copy it to target/classes"
+      ],
+      "breaking": false,
+      "migration_path": "Use app.seed.file with an external file path for intentional demo imports."
+    },
+    {
+      "id": "FIX-004",
+      "finding_id": "FIND-011",
+      "type": "code",
+      "title": "Tighten N8N keyword matching",
+      "files": [
+        "n8n-service-orchestration/service-registry/service_matcher.py"
+      ],
+      "changes": [
+        "Added MIN_FUZZY_KEYWORD_LENGTH",
+        "Added boundary-aware exact keyword matching",
+        "Preserved fuzzy matching for longer keywords"
+      ],
+      "breaking": false,
+      "migration_path": "No migration required."
+    },
+    {
+      "id": "FIX-005",
+      "finding_id": "FIND-012",
+      "type": "test",
+      "title": "Replace stale Flutter counter test",
+      "files": [
+        "sports-app/test/widget_test.dart"
+      ],
+      "changes": [
+        "Smoke test now asserts the actual MaterialApp shell renders",
+        "Removed counter and plus-icon expectations"
+      ],
+      "breaking": false,
+      "migration_path": "No migration required."
+    },
+    {
+      "id": "FIX-006",
+      "finding_id": "FIND-007",
+      "type": "quality_gate",
+      "title": "Add generated artifact ignores and Python SAST baseline",
+      "files": [
+        ".gitignore",
+        "production-audit/bandit-python-services.json"
+      ],
+      "changes": [
+        "Ignore __pycache__, pyc files, pytest cache, and local audit dependencies",
+        "Bandit scan now reports zero findings for Python service code"
+      ],
+      "breaking": false,
+      "migration_path": "No migration required."
+    }
+  ],
+  "tests": {
+    "passed": [
+      "sports_management_project: mvn -q clean test -DskipITs -> passed",
+      "scouting-ai-service: python -m pytest tests -v -> 9 passed",
+      "academy-ranking-ai-service: python -m pytest tests -v -> 6 passed",
+      "n8n-service-orchestration: python -m pytest tests -v -> 23 passed, 2 deprecation warnings",
+      "sports-app: flutter test -> 1 passed",
+      "Python compile checks: compileall app/tests/service-registry -> passed",
+      "Bandit Python SAST: 0 results"
+    ],
+    "failed": [],
+    "blocked_or_deferred": [
+      "Full Flutter analyze remains noisy from the existing baseline and was not burned down in this pass",
+      "Full dependency CVE scanning was not run for Java/Flutter/Python lockfiles in this pass",
+      "No live database was available for query-plan/index verification"
+    ],
+    "coverage": {
+      "before": "No trustworthy multi-service coverage baseline",
+      "after": "Test counts improved; coverage tooling still needs CI setup",
+      "delta": "Added 8 FastAPI auth regression tests and restored one Flutter smoke test"
+    }
+  },
+  "security": {
+    "issues_found": 5,
+    "issues_fixed": 5,
+    "vulnerabilities_added": 0,
+    "notes": [
+      "Backend JWT/Stripe committed literals removed",
+      "AI service token auth now fails closed outside dev/local/test",
+      "Packaged demo seed removed from backend runtime artifact",
+      "Python Bandit scan is clean for scanned service code"
+    ]
+  },
+  "performance": {
+    "latency": "Not materially affected; service-auth checks are constant-time string/config checks",
+    "memory": "Not materially affected",
+    "notes": "No load test was run in this pass."
+  },
+  "architecture_changes": {
+    "summary": "Security posture tightened without changing service topology. Production runtime now requires explicit JWT and service-token configuration.",
+    "breaking_changes": true,
+    "breaking_change_details": [
+      "Backend startup now fails when JWT_SECRET is missing or too short",
+      "FastAPI compute services reject production-like traffic when service tokens are not configured"
+    ]
+  },
+  "artifacts": [
+    "production-audit/iteration-002-report.json",
+    "production-audit/iteration-002-summary.md",
+    "production-audit/bandit-python-services.json",
+    "production-audit/production-readiness-checklist.md",
+    "production-audit/deployment-runbook.md",
+    "production-audit/troubleshooting-guide.md",
+    "production-audit/on-call-handbook.md"
+  ],
+  "next_steps": [
+    "Add CI pipeline that runs Maven clean test, pytest, flutter test, and Bandit",
+    "Add Spring Actuator/Prometheus and correlation IDs across backend and AI services",
+    "Add contract tests generated from Spring OpenAPI and FastAPI schemas",
+    "Run dependency vulnerability scans with Maven/Flutter/Python lockfile tooling",
+    "Address CSRF split-chain risk for cookie-backed admin web routes"
+  ],
+  "convergence_status": "Partial - critical config/auth/test failures improved; production readiness still requires CI, observability, dependency scanning, CSRF review, DB profiling, and load testing."
+}

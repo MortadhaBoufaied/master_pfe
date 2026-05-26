@@ -1,0 +1,326 @@
+{
+  "iteration_range": "003-100",
+  "date": "2026-05-26T15:20:00+01:00",
+  "execution_model": "bundled autonomous pass",
+  "scope_note": "This report consolidates iterations 3 through 100 into one local hardening pass. It closes several critical and high-risk local findings, but it does not claim that all production readiness work is complete because several items require staging infrastructure, production credentials, live database profiling, or organizational approval.",
+  "focus_areas": [
+    "CI/CD reproducibility",
+    "Python dependency vulnerability burn-down",
+    "Python SAST burn-down",
+    "FastAPI and admin JWT hardening",
+    "N8N timeout and timestamp correctness",
+    "Local audit runbook automation",
+    "Production readiness documentation"
+  ],
+  "findings": [
+    {
+      "id": "FIND-013",
+      "severity": "high",
+      "area": "CI/CD",
+      "title": "No repository-level hardening workflow existed",
+      "evidence": [
+        "Repository discovery found no .github/workflows production gate before this pass",
+        "Tests, SAST, Flutter smoke tests, and dependency audits had to be run manually"
+      ],
+      "root_cause": "No checked-in CI orchestration for the multi-service repo",
+      "fix_status": "fixed locally",
+      "recommended_follow_up": "Run the workflow in GitHub Actions and tune any environment-specific failures"
+    },
+    {
+      "id": "FIND-014",
+      "severity": "high",
+      "area": "Dependencies",
+      "title": "Python direct dependencies had known vulnerabilities",
+      "evidence": [
+        "pip-audit initially flagged vulnerable direct requirements in Scouting AI and Chatbot",
+        "Django 5.2.1 and sqlparse 0.5.3 were vulnerable in chatbot/chatbot/requirements.txt",
+        "python-jose introduced vulnerable transitive dependency pressure in scouting-ai-service"
+      ],
+      "root_cause": "Dependency versions were not continuously audited or upgraded",
+      "fix_status": "fixed for direct Python requirements",
+      "recommended_follow_up": "Add full lockfile/SBOM generation and transitive release artifact scanning"
+    },
+    {
+      "id": "FIND-015",
+      "severity": "high",
+      "area": "Security",
+      "title": "Scouting JWT helpers used python-jose dependency family",
+      "evidence": [
+        "scouting-ai-service/app/core/auth.py imported jose.jwt",
+        "scouting-ai-service/adminplatform/auth.py imported jose.jwt"
+      ],
+      "root_cause": "Legacy JWT implementation dependency had not been revisited",
+      "fix_status": "fixed",
+      "recommended_follow_up": "Standardize service JWT issuer/audience validation across Spring and FastAPI services"
+    },
+    {
+      "id": "FIND-016",
+      "severity": "medium",
+      "area": "Correctness",
+      "title": "N8N service executor classified timeout failures as generic connection errors",
+      "evidence": [
+        "n8n-service-orchestration/webhooks/service_executor.py handled httpx.RequestError before explicit timeout classification"
+      ],
+      "root_cause": "Timeout-specific exception handling was missing",
+      "fix_status": "fixed",
+      "recommended_follow_up": "Add end-to-end webhook tests with a real delayed service"
+    },
+    {
+      "id": "FIND-017",
+      "severity": "medium",
+      "area": "Correctness",
+      "title": "Python services emitted deprecated naive UTC timestamps",
+      "evidence": [
+        "response_formatter.py used datetime.utcnow()",
+        "service_executor.py used datetime.utcnow()",
+        "scouting-ai-service/adminplatform/main.py used datetime.utcnow()"
+      ],
+      "root_cause": "Timezone-aware timestamp convention was not enforced",
+      "fix_status": "fixed",
+      "recommended_follow_up": "Adopt a shared timestamp helper and structured JSON log format"
+    },
+    {
+      "id": "FIND-018",
+      "severity": "high",
+      "area": "SAST",
+      "title": "Bandit reported actionable chatbot and admin-platform security findings",
+      "evidence": [
+        "MD5 hashing used for API-key rate-limit cache names and model fingerprints",
+        "Remote model download path used urlretrieve without explicit HTTPS validation",
+        "Exceptions were swallowed silently in model and notification code"
+      ],
+      "root_cause": "Security linting was not part of regular development workflow",
+      "fix_status": "fixed for scanned Python app/service directories",
+      "recommended_follow_up": "Keep Bandit in CI and add a policy for accepted nosec exceptions"
+    }
+  ],
+  "fixes_implemented": [
+    {
+      "id": "FIX-013",
+      "finding_id": "FIND-013",
+      "type": "ci",
+      "title": "Add GitHub Actions production hardening gates",
+      "files": [
+        ".github/workflows/production-hardening.yml",
+        ".github/dependabot.yml"
+      ],
+      "changes": [
+        "Added Spring backend test job with Maven cache and demo seed packaging check",
+        "Added Python matrix for Scouting AI, Academy Ranking AI, N8N support code, and Django chatbot tests",
+        "Added Bandit SAST job logic per Python service",
+        "Added Flutter widget smoke-test job",
+        "Added pip-audit and Maven dependency-resolution audit job",
+        "Added weekly Dependabot updates for Actions, Maven, pip, and pub"
+      ],
+      "breaking": false,
+      "rollback": "Remove the workflow and dependabot files; local code remains compatible"
+    },
+    {
+      "id": "FIX-014",
+      "finding_id": "FIND-014",
+      "type": "dependency",
+      "title": "Patch vulnerable direct Python requirements",
+      "files": [
+        "scouting-ai-service/requirements.txt",
+        "academy-ranking-ai-service/requirements.txt",
+        "chatbot/chatbot/requirements.txt"
+      ],
+      "changes": [
+        "Pinned FastAPI to a clean version used by the audited services",
+        "Updated python-dotenv, python-multipart, pytest, Django, and sqlparse",
+        "Replaced python-jose with PyJWT in Scouting AI service requirements"
+      ],
+      "breaking": false,
+      "rollback": "Revert requirement pins only if a compatibility issue is found, then document and patch the replacement version"
+    },
+    {
+      "id": "FIX-015",
+      "finding_id": "FIND-015",
+      "type": "code",
+      "title": "Migrate Scouting JWT helpers to PyJWT and fail closed outside local modes",
+      "files": [
+        "scouting-ai-service/app/core/auth.py",
+        "scouting-ai-service/adminplatform/auth.py",
+        "scouting-ai-service/tests/test_auth_tokens.py"
+      ],
+      "changes": [
+        "Replaced jose JWT operations with PyJWT",
+        "Added timezone-aware token timestamps",
+        "Kept fallback JWT secrets only for dev, local, and test environments",
+        "Added token round-trip and invalid-token regression tests"
+      ],
+      "breaking": false,
+      "rollback": "Restore python-jose import and requirement, but this would reintroduce audit risk"
+    },
+    {
+      "id": "FIX-016",
+      "finding_id": "FIND-016",
+      "type": "test+code",
+      "title": "Classify N8N timeouts explicitly",
+      "files": [
+        "n8n-service-orchestration/webhooks/service_executor.py",
+        "n8n-service-orchestration/tests/test_service_executor.py"
+      ],
+      "changes": [
+        "Added explicit httpx.TimeoutException handling",
+        "Added regression coverage that asserts timeout error_type is preserved"
+      ],
+      "breaking": false,
+      "rollback": "Revert the service executor and regression test"
+    },
+    {
+      "id": "FIX-017",
+      "finding_id": "FIND-017",
+      "type": "code",
+      "title": "Use timezone-aware UTC timestamps in Python services",
+      "files": [
+        "n8n-service-orchestration/service-registry/response_formatter.py",
+        "n8n-service-orchestration/webhooks/service_executor.py",
+        "scouting-ai-service/adminplatform/main.py",
+        "scouting-ai-service/app/core/auth.py",
+        "scouting-ai-service/adminplatform/auth.py"
+      ],
+      "changes": [
+        "Replaced datetime.utcnow() with datetime.now(timezone.utc)",
+        "Updated JWT expiration and issued-at claims to use aware datetimes"
+      ],
+      "breaking": false,
+      "rollback": "Revert timestamp changes if a consumer cannot parse timezone-bearing ISO strings"
+    },
+    {
+      "id": "FIX-018",
+      "finding_id": "FIND-018",
+      "type": "security",
+      "title": "Burn down Python Bandit findings in scanned service directories",
+      "files": [
+        "chatbot/chatbot/apps/chat/services/security.py",
+        "chatbot/chatbot/apps/chat/training_models/train_model.py",
+        "chatbot/chatbot/apps/chat/services/RunModel.py",
+        "scouting-ai-service/adminplatform/main.py",
+        "production-audit/bandit-python-services.json"
+      ],
+      "changes": [
+        "Changed non-cryptographic MD5 usage to SHA-256",
+        "Added HTTPS scheme validation before model download",
+        "Added model and dataset revision controls for Hugging Face loads",
+        "Replaced silent exception swallowing with logger warnings",
+        "Recorded a zero-finding Bandit report for scanned directories"
+      ],
+      "breaking": false,
+      "rollback": "Revert individual service changes and rerun Bandit to confirm the accepted risk"
+    },
+    {
+      "id": "FIX-019",
+      "finding_id": "FIND-013",
+      "type": "runbook",
+      "title": "Add local hardening check runner",
+      "files": [
+        "production-audit/run-local-hardening-checks.ps1",
+        "production-audit/dependency-audit-plan.md"
+      ],
+      "changes": [
+        "Added a PowerShell runner for Maven, pytest, Flutter, Bandit, pip-audit, and seed packaging checks",
+        "Documented dependency audit release gates and remaining SBOM work"
+      ],
+      "breaking": false,
+      "rollback": "Remove the audit runner and plan files"
+    }
+  ],
+  "tests": {
+    "commands": [
+      "cd sports_management_project && mvn -q clean test -DskipITs",
+      "cd scouting-ai-service && python -m pytest tests -v",
+      "cd academy-ranking-ai-service && python -m pytest tests -v",
+      "cd n8n-service-orchestration && python -m pytest tests -v",
+      "cd chatbot/chatbot && python -m pytest apps/chat/tests -v",
+      "cd sports-app && flutter test",
+      "python -m bandit -r scouting-ai-service/app scouting-ai-service/adminplatform academy-ranking-ai-service/app n8n-service-orchestration/service-registry n8n-service-orchestration/webhooks chatbot/chatbot/apps -x chatbot/chatbot/apps/chat/tests_comprehensive.py -f json -o production-audit/bandit-python-services.json",
+      "python -m pip_audit --no-deps -r <service requirements> -f json -o production-audit/pip-audit-*.json"
+    ],
+    "passed": [
+      {
+        "service": "Spring backend",
+        "result": "Maven tests passed"
+      },
+      {
+        "service": "Scouting AI",
+        "result": "11 pytest tests passed"
+      },
+      {
+        "service": "Academy Ranking AI",
+        "result": "6 pytest tests passed"
+      },
+      {
+        "service": "N8N support code",
+        "result": "24 pytest tests passed"
+      },
+      {
+        "service": "Django chatbot",
+        "result": "2 pytest tests passed with one warning about a test returning a tuple"
+      },
+      {
+        "service": "Flutter mobile app",
+        "result": "All widget tests passed"
+      },
+      {
+        "service": "Python SAST",
+        "result": "Bandit completed with 0 findings in scanned app/service directories"
+      },
+      {
+        "service": "Python dependency audit",
+        "result": "pip-audit returned 0 known vulnerabilities for direct audited requirement files after updates"
+      }
+    ],
+    "failed": [],
+    "known_warnings": [
+      "chatbot/chatbot/apps/chat/tests/test_service_integration.py::test_service_detection returns a tuple and emits PytestReturnNotNoneWarning"
+    ],
+    "coverage": {
+      "status": "not fully measured in this bundled pass",
+      "note": "Functional and security gates were prioritized; per-service coverage thresholds remain a follow-up gate."
+    }
+  },
+  "security": {
+    "issues_found": 6,
+    "issues_fixed": 6,
+    "vulnerabilities_added": 0,
+    "pip_audit_direct_requirement_status": {
+      "scouting-ai-service": "0 vulnerabilities",
+      "academy-ranking-ai-service": "0 vulnerabilities",
+      "n8n-service-orchestration": "0 vulnerabilities",
+      "chatbot/chatbot": "0 vulnerabilities"
+    },
+    "bandit_status": "0 findings in scanned Python service directories"
+  },
+  "architecture_changes": {
+    "summary": "The platform now has repository-level CI gates, direct dependency audit automation, stronger local JWT handling in Scouting AI, explicit N8N timeout classification, and a repeatable local hardening runner. No service API was intentionally broken.",
+    "breaking_changes": false,
+    "migration_path": [
+      "Set JWT_SECRET, JWT_SECRET_KEY, ADMIN_JWT_SECRET, SCOUTING_SERVICE_TOKEN, ACADEMY_RANKING_AI_SERVICE_TOKEN, and APP_ENV in staging/prod before deployment",
+      "Run the GitHub Actions workflow in a branch PR and tune environment variables if CI differs from the local workstation",
+      "Generate lockfiles or SBOMs before declaring dependency scanning complete"
+    ]
+  },
+  "artifacts": [
+    ".github/workflows/production-hardening.yml",
+    ".github/dependabot.yml",
+    "production-audit/run-local-hardening-checks.ps1",
+    "production-audit/dependency-audit-plan.md",
+    "production-audit/bandit-python-services.json",
+    "production-audit/pip-audit-scouting-ai-service_requirements.txt.json",
+    "production-audit/pip-audit-academy-ranking-ai-service_requirements.txt.json",
+    "production-audit/pip-audit-n8n-service-orchestration_requirements.txt.json",
+    "production-audit/pip-audit-chatbot_chatbot_requirements.txt.json",
+    "production-audit/iteration-003-100-summary.md"
+  ],
+  "remaining_no_go_items": [
+    "Spring CSRF/security-chain split remains open",
+    "Full distributed tracing, metrics, dashboards, and alert rules remain open",
+    "Database indexing and query-plan validation require a staging-like PostgreSQL dataset",
+    "Contract tests and generated OpenAPI compatibility checks remain partial",
+    "Load, stress, and chaos testing remain open",
+    "Flutter accessibility and analyzer burn-down remain open",
+    "Java/Flutter transitive CVE scanning and release SBOMs remain open"
+  ],
+  "convergence_status": "Partial. Critical local config/auth/dependency/SAST risks were reduced and repeatable gates were added. The repository is materially closer to production readiness, but enterprise production approval still requires staging validation, observability, database profiling, contract testing, and CSRF hardening."
+}

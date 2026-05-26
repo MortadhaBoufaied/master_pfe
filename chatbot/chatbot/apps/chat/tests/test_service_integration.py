@@ -6,6 +6,8 @@ import json
 from pathlib import Path
 from typing import Dict, List
 
+import pytest
+
 # Add project root to path
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
@@ -142,16 +144,12 @@ def test_service_detection():
     try:
         from apps.chat.services.service_detection import get_service_detector
     except ImportError:
-        print("ERROR: Could not import service detection module")
-        print("Make sure you're running this from the project root")
-        return
+        pytest.fail("Could not import service detection module")
     
     detector = get_service_detector()
     
     if not detector.enabled_services:
-        print("WARNING: No services loaded from registry")
-        print(f"Services path: {detector.services_path}")
-        return
+        pytest.fail(f"No services loaded from registry: {detector.services_path}")
     
     print(f"✓ Loaded {len(detector.enabled_services)} services\n")
     
@@ -189,8 +187,9 @@ def test_service_detection():
     print("="*70)
     print(f"RESULTS: {passed} passed, {failed} failed out of {len(TEST_CASES)} tests")
     print("="*70 + "\n")
-    
-    return passed, failed
+
+    if failed:
+        pytest.fail(f"{failed} service-detection cases failed")
 
 
 def list_all_services():

@@ -3,10 +3,26 @@ Service Matcher - Detects services from user messages
 Uses keyword matching and fuzzy string matching to identify requested services
 """
 import json
-import os
+import re
 from typing import List, Dict, Optional
 from rapidfuzz import fuzz
 from pathlib import Path
+
+
+MIN_FUZZY_KEYWORD_LENGTH = 8
+FUZZY_KEYWORD_THRESHOLD = 80.0
+GENERIC_SINGLE_KEYWORDS = {
+    "about",
+    "booking",
+    "information",
+    "issue",
+    "problem",
+    "report",
+    "service",
+    "status",
+    "training",
+    "what is",
+}
 
 
 class ServiceMatcher:
@@ -91,27 +107,43 @@ class ServiceMatcher:
         
         # Exact keyword matching with high weight
         for keyword in keywords:
-            if keyword.lower() in message:
-                exact_score = 100.0
-                max_score = max(max_score, exact_score)
-            else:
-                # Fuzzy match
-                ratio = fuzz.token_set_ratio(keyword.lower(), message)
-                max_score = max(max_score, float(ratio))
+            keyword_lower = keyword.lower()
+            keyword_score = self._keyword_score(message, keyword_lower)
+            if keyword_score:
+                max_score = max(max_score, keyword_score)
+            elif len(keyword_lower) >= MIN_FUZZY_KEYWORD_LENGTH and keyword_lower not in GENERIC_SINGLE_KEYWORDS:
+                ratio = fuzz.token_set_ratio(keyword_lower, message)
+                if ratio >= FUZZY_KEYWORD_THRESHOLD:
+                    max_score = max(max_score, float(ratio))
         
         # Also check against service name
         name_ratio = fuzz.partial_token_set_ratio(service['name'].lower(), message)
-        max_score = max(max_score, float(name_ratio) * 0.8)  # Slightly lower weight for name
+        max_score = max(max_score, float(name_ratio) * 0.6)
         
         return max_score
+
+    def _keyword_score(self, message: str, keyword: str) -> float:
+        """Score exact keyword hits while suppressing overly generic single terms."""
+        if not self._keyword_matches(message, keyword):
+            return 0.0
+
+        if " " in keyword:
+            return 110.0
+        if keyword in GENERIC_SINGLE_KEYWORDS:
+            return 60.0
+        return 100.0
     
     def _get_matched_keywords(self, message: str, service: Dict) -> List[str]:
         """Get list of matched keywords"""
         matched = []
         for keyword in service.get('keywords', []):
-            if keyword.lower() in message:
+            if self._keyword_matches(message, keyword.lower()):
                 matched.append(keyword)
         return matched
+
+    def _keyword_matches(self, message: str, keyword: str) -> bool:
+        """Return true when a keyword appears as words, not as a loose fuzzy hit."""
+        return re.search(rf"(?<!\w){re.escape(keyword)}(?!\w)", message) is not None
     
     def extract_parameters(self, message: str, service_id: str) -> Dict:
         """

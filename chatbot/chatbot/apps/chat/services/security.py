@@ -44,7 +44,7 @@ class RateLimiter:
         # Prefer API key if available
         api_key = request.headers.get('X-API-Key') or request.META.get('HTTP_X_API_KEY')
         if api_key:
-            return f"api:{hashlib.md5(api_key.encode()).hexdigest()}"
+            return f"api:{hashlib.sha256(api_key.encode()).hexdigest()}"
         
         # Fall back to IP address
         x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')

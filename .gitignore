@@ -8,3 +8,10 @@ chatbot/chatbot/chatbot.txt
 **/credentials.json
 **/.env
 **/.env.local
+
+# Generated test/runtime artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+production-audit/python-test-deps/
+production-audit/pip-audit-cache/

@@ -1,0 +1,202 @@
+{
+  "iteration_range": "101-150",
+  "date": "2026-05-26T16:10:00+01:00",
+  "execution_model": "bundled final validation and handoff pass",
+  "scope_note": "This pass completed the locally feasible testing, contract, and documentation work for the remaining iteration range. Items requiring staging infrastructure, production credentials, representative database traffic, or organizational approval remain explicitly blocked or open.",
+  "focus_areas": [
+    "Contract testing",
+    "Chatbot and N8N intent-routing correctness",
+    "Validation runbooks",
+    "Disaster recovery and rollback planning",
+    "Final production readiness reporting"
+  ],
+  "findings": [
+    {
+      "id": "FIND-020",
+      "severity": "high",
+      "area": "Contract Testing",
+      "title": "Critical FastAPI and N8N service contracts were not enforced by tests",
+      "evidence": [
+        "No OpenAPI route-presence tests existed for Scouting AI compute endpoints",
+        "No OpenAPI route/schema tests existed for Academy Ranking AI endpoint",
+        "No registry invariant tests existed for enabled N8N services"
+      ],
+      "root_cause": "Service-boundary contracts were documented but not protected by automated checks",
+      "fix_status": "fixed locally",
+      "recommended_follow_up": "Export signed OpenAPI artifacts during CI and compare client SDK generation in a later pass"
+    },
+    {
+      "id": "FIND-021",
+      "severity": "high",
+      "area": "Chatbot/N8N Routing",
+      "title": "Chatbot service-detection test returned a tuple instead of asserting results",
+      "evidence": [
+        "chatbot/chatbot/apps/chat/tests/test_service_integration.py returned passed/failed counts",
+        "After converting the result to an assertion, 8 of 17 cases failed due to extra workflow matches"
+      ],
+      "root_cause": "The test printed failures but did not fail pytest; fuzzy matching accepted overly generic keywords",
+      "fix_status": "fixed",
+      "recommended_follow_up": "Add a shared matcher package or generated matcher test corpus so chatbot and N8N cannot drift"
+    },
+    {
+      "id": "FIND-022",
+      "severity": "medium",
+      "area": "Validation",
+      "title": "Final staging and disaster-recovery validation process was not captured as executable handoff guidance",
+      "evidence": [
+        "Existing runbooks did not include staging validation exit criteria or restore procedure"
+      ],
+      "root_cause": "Earlier passes prioritized code and local gates over operational handoff",
+      "fix_status": "fixed as documentation",
+      "recommended_follow_up": "Rehearse the plan in staging and convert repeated manual checks into automated smoke tests"
+    }
+  ],
+  "fixes_implemented": [
+    {
+      "id": "FIX-020",
+      "finding_id": "FIND-020",
+      "type": "tests",
+      "title": "Add service-boundary contract tests",
+      "files": [
+        "scouting-ai-service/tests/test_openapi_contract.py",
+        "academy-ranking-ai-service/tests/test_openapi_contract.py",
+        "n8n-service-orchestration/tests/test_service_registry_contract.py",
+        "production-audit/api-contracts.md"
+      ],
+      "changes": [
+        "Protected Scouting AI health and compute routes through OpenAPI checks",
+        "Protected Academy Ranking health and scoring route/schema refs",
+        "Protected N8N enabled-service registry invariants and required service IDs",
+        "Documented the contract gate and CI behavior"
+      ],
+      "breaking": false
+    },
+    {
+      "id": "FIX-021",
+      "finding_id": "FIND-021",
+      "type": "code+tests",
+      "title": "Make chatbot service detection assertive and reduce false-positive workflow routing",
+      "files": [
+        "chatbot/chatbot/apps/chat/tests/test_service_integration.py",
+        "chatbot/chatbot/apps/chat/services/service_detection.py",
+        "n8n-service-orchestration/service-registry/service_matcher.py"
+      ],
+      "changes": [
+        "Converted printed chatbot service-detection failures into pytest assertions",
+        "Suppressed overly generic single-word keyword matches",
+        "Required stronger fuzzy keyword matches",
+        "Applied consistent matcher behavior to the N8N-side service matcher"
+      ],
+      "breaking": false
+    },
+    {
+      "id": "FIX-022",
+      "finding_id": "FIND-022",
+      "type": "documentation",
+      "title": "Complete final validation and handoff documentation",
+      "files": [
+        "production-audit/staging-validation-plan.md",
+        "production-audit/disaster-recovery-and-rollback.md",
+        "production-audit/final-production-readiness-report.md",
+        "production-audit/iteration-101-150-summary.md"
+      ],
+      "changes": [
+        "Added staging validation sequence and exit criteria",
+        "Added disaster recovery and rollback procedure",
+        "Added final production readiness report with remaining no-go items"
+      ],
+      "breaking": false
+    },
+    {
+      "id": "FIX-023",
+      "finding_id": "FIND-020",
+      "type": "ci",
+      "title": "Reduce pytest cache noise in local and CI gates",
+      "files": [
+        ".github/workflows/production-hardening.yml",
+        "production-audit/run-local-hardening-checks.ps1"
+      ],
+      "changes": [
+        "Added pytest cacheprovider suppression to local and CI Python test commands",
+        "Set PYTHONDONTWRITEBYTECODE in local hardening runner"
+      ],
+      "breaking": false
+    },
+    {
+      "id": "FIX-024",
+      "finding_id": "FIND-020",
+      "type": "code",
+      "title": "Replace deprecated Scouting AI startup hook with FastAPI lifespan handler",
+      "files": [
+        "scouting-ai-service/app/main.py"
+      ],
+      "changes": [
+        "Moved SQLite directory preparation and table initialization into a FastAPI lifespan handler",
+        "Removed deprecated @app.on_event startup usage"
+      ],
+      "breaking": false
+    }
+  ],
+  "tests": {
+    "passed": [
+      {
+        "service": "Full local hardening runner",
+        "result": "production-audit/run-local-hardening-checks.ps1 completed successfully"
+      },
+      {
+        "service": "Spring backend",
+        "result": "Maven test gate passed inside the full runner"
+      },
+      {
+        "service": "Scouting AI",
+        "result": "13 pytest tests passed"
+      },
+      {
+        "service": "Academy Ranking AI",
+        "result": "8 pytest tests passed"
+      },
+      {
+        "service": "N8N support code",
+        "result": "27 pytest tests passed"
+      },
+      {
+        "service": "Django chatbot",
+        "result": "2 pytest tests passed"
+      },
+      {
+        "service": "Flutter app",
+        "result": "Widget smoke test passed"
+      },
+      {
+        "service": "Python SAST",
+        "result": "Bandit report has 0 findings for scanned Python app/service directories"
+      },
+      {
+        "service": "Python dependency audit",
+        "result": "pip-audit found no known vulnerabilities in audited direct requirement files"
+      }
+    ],
+    "failed": [],
+    "commands": [
+      "powershell -ExecutionPolicy Bypass -File production-audit/run-local-hardening-checks.ps1",
+      "cd scouting-ai-service && python -m pytest tests -v -p no:cacheprovider",
+      "cd academy-ranking-ai-service && python -m pytest tests -v -p no:cacheprovider",
+      "cd n8n-service-orchestration && python -m pytest tests -v -p no:cacheprovider",
+      "cd chatbot/chatbot && python -m pytest apps/chat/tests -v -p no:cacheprovider"
+    ],
+    "known_warnings": [
+      "pip-audit warns that --no-deps direct audits should be replaced with hashed lockfiles for release-grade scanning",
+      "Bandit warns about existing nosec B105 annotations in scouting-ai-service/app/api/routes/auth.py, but the current Bandit JSON contains 0 findings"
+    ]
+  },
+  "remaining_no_go_items": [
+    "Spring CSRF/security-chain split",
+    "Full observability implementation and alert validation",
+    "Staging database profiling and index validation",
+    "Load, stress, soak, and chaos tests against production-like infrastructure",
+    "Java/Flutter transitive CVE gates and release SBOM generation",
+    "Flutter accessibility/WCAG audit",
+    "Disaster recovery restore and rollback rehearsal in staging"
+  ],
+  "convergence_status": "Locally feasible iteration scope completed. The platform is not production-certified; it is ready for a staging validation sprint with explicit remaining blockers."
+}

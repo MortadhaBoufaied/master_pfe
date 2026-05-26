@@ -1,0 +1,56 @@
+groups:
+  - name: sports-platform-slo
+    rules:
+      - alert: SpringBackendDown
+        expr: up{job="spring-backend"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: Spring backend is down
+          description: "Prometheus has not scraped the Spring backend for 2 minutes."
+
+      - alert: SpringHigh5xxRate
+        expr: |
+          sum(rate(http_server_requests_seconds_count{status=~"5.."}[5m]))
+          /
+          clamp_min(sum(rate(http_server_requests_seconds_count[5m])), 1)
+          > 0.02
+        for: 10m
+        labels:
+          severity: high
+        annotations:
+          summary: Spring backend 5xx rate above 2%
+
+      - alert: SpringHighLatencyP95
+        expr: histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket[5m])) by (le)) > 0.75
+        for: 10m
+        labels:
+          severity: high
+        annotations:
+          summary: Spring backend p95 latency above 750ms
+
+      - alert: ScoutingAiHigh5xxRate
+        expr: |
+          sum(rate(scouting_ai_http_responses_total{status=~"5.."}[5m]))
+          /
+          clamp_min(sum(rate(scouting_ai_http_requests_total[5m])), 1)
+          > 0.02
+        for: 10m
+        labels:
+          severity: high
+        annotations:
+          summary: Scouting AI 5xx rate above 2%
+
+      - alert: AcademyRankingAiHigh5xxRate
+        expr: |
+          sum(rate(academy_ranking_ai_http_responses_total{status=~"5.."}[5m]))
+          /
+          clamp_min(sum(rate(academy_ranking_ai_http_requests_total[5m])), 1)
+          > 0.02
+        for: 10m
+        labels:
+          severity: high
+        annotations:
+          summary: Academy Ranking AI 5xx rate above 2%
+

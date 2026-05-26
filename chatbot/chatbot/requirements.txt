@@ -1,6 +1,6 @@
-Django==5.2.1
+Django==5.2.14
 asgiref==3.8.1
-sqlparse==0.5.3
+sqlparse==0.5.4
 tzdata==2025.2
 
 # Data & ML

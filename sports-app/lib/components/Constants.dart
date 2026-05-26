@@ -13,7 +13,7 @@ String _backendHost() {
   final raw =
       _apiHostOverride.isNotEmpty
           ? _apiHostOverride
-          : 'localhost:8080';
+          : 'localhost:8091';
 
   // If someone provided a full URL (e.g. https://example.com), strip scheme + trailing slashes.
   var host = raw.trim();

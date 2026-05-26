@@ -2,11 +2,27 @@
 
 import logging
 import json
+import re
 from typing import Dict, List, Optional, Any
 from pathlib import Path
 from rapidfuzz import fuzz
 
 logger = logging.getLogger('chatbot')
+
+MIN_FUZZY_KEYWORD_LENGTH = 8
+FUZZY_KEYWORD_THRESHOLD = 80.0
+GENERIC_SINGLE_KEYWORDS = {
+    "about",
+    "booking",
+    "information",
+    "issue",
+    "problem",
+    "report",
+    "service",
+    "status",
+    "training",
+    "what is",
+}
 
 
 class ServiceDetector:
@@ -94,19 +110,34 @@ class ServiceDetector:
         
         for keyword in keywords:
             keyword_lower = keyword.lower()
-            # Exact keyword matching with high weight
-            if keyword_lower in message:
-                max_score = max(max_score, 100.0)
-            else:
-                # Fuzzy match using token set ratio
+            keyword_score = self._keyword_score(message, keyword_lower)
+            if keyword_score:
+                max_score = max(max_score, keyword_score)
+            elif len(keyword_lower) >= MIN_FUZZY_KEYWORD_LENGTH and keyword_lower not in GENERIC_SINGLE_KEYWORDS:
                 ratio = fuzz.token_set_ratio(keyword_lower, message)
-                max_score = max(max_score, float(ratio))
+                if ratio >= FUZZY_KEYWORD_THRESHOLD:
+                    max_score = max(max_score, float(ratio))
         
         # Also check against service name
         name_ratio = fuzz.partial_token_set_ratio(service['name'].lower(), message)
-        max_score = max(max_score, float(name_ratio) * 0.8)  # Slightly lower weight for name
+        max_score = max(max_score, float(name_ratio) * 0.6)
         
         return max_score
+
+    def _keyword_score(self, message: str, keyword: str) -> float:
+        """Score exact keyword hits while suppressing overly generic single terms."""
+        if not self._keyword_matches(message, keyword):
+            return 0.0
+
+        if " " in keyword:
+            return 110.0
+        if keyword in GENERIC_SINGLE_KEYWORDS:
+            return 60.0
+        return 100.0
+
+    def _keyword_matches(self, message: str, keyword: str) -> bool:
+        """Return true when a keyword appears on word boundaries."""
+        return re.search(rf"(?<!\w){re.escape(keyword)}(?!\w)", message) is not None
     
     def get_service_info(self, service_id: str) -> Optional[Dict]:
         """Get service information."""

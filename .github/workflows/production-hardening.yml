@@ -1,0 +1,162 @@
+name: Production Hardening Gates
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  spring-backend:
+    name: Spring backend tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: sports_management_project
+    env:
+      JWT_SECRET: 00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff
+      STRIPE_SECRET_KEY: sk_test_ci_placeholder
+      DB_HOST: localhost
+      DB_PORT: "5432"
+      DB_NAME: football_academy_test
+      DB_USER: test
+      DB_PASS: test
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+      - name: Run unit tests
+        run: mvn -q clean test -DskipITs
+      - name: Verify demo seed is not packaged
+        shell: bash
+        run: |
+          if [ -f target/classes/Files/Data/data.json ]; then
+            echo "Demo seed data was packaged into the backend artifact."
+            exit 1
+          fi
+
+  python-services:
+    name: Python service tests and SAST
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: scouting-ai-service
+            test_path: tests
+          - service: academy-ranking-ai-service
+            test_path: tests
+          - service: n8n-service-orchestration
+            test_path: tests
+          - service: chatbot/chatbot
+            test_path: apps/chat/tests
+    defaults:
+      run:
+        working-directory: ${{ matrix.service }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pytest bandit
+          if [ -f requirements.txt ]; then python -m pip install -r requirements.txt; fi
+      - name: Run tests
+        run: python -m pytest ${{ matrix.test_path }} -v -p no:cacheprovider
+      - name: Run Bandit
+        run: |
+          targets=""
+          for dir in app apps service-registry webhooks chatbot; do
+            if [ -d "$dir" ]; then targets="$targets $dir"; fi
+          done
+          excludes=""
+          if [ "${{ matrix.service }}" = "chatbot/chatbot" ]; then
+            excludes="-x apps/chat/tests_comprehensive.py"
+          fi
+          if [ -n "$targets" ]; then python -m bandit -r $targets $excludes -q; fi
+
+  flutter-mobile:
+    name: Flutter smoke tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: sports-app
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.29.3"
+          channel: stable
+          cache: true
+      - name: Install dependencies
+        run: flutter pub get
+      - name: Run widget tests
+        run: flutter test
+
+  dependency-audit:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+      - name: Python dependency audit
+        run: |
+          python -m pip install --upgrade pip pip-audit
+          for req in scouting-ai-service/requirements.txt academy-ranking-ai-service/requirements.txt n8n-service-orchestration/requirements.txt chatbot/chatbot/requirements.txt; do
+            if [ -f "$req" ]; then python -m pip_audit --no-deps -r "$req"; fi
+          done
+      - name: Maven dependency tree smoke check
+        working-directory: sports_management_project
+        run: mvn -q -DskipTests dependency:tree
+      - name: Generate Spring SBOM
+        working-directory: sports_management_project
+        run: mvn -q -DskipTests org.cyclonedx:cyclonedx-maven-plugin:2.8.0:makeAggregateBom
+      - name: Generate Python direct dependency SBOMs
+        run: |
+          python -m pip install --upgrade pip pip-audit
+          mkdir -p production-audit/sbom
+          for req in scouting-ai-service/requirements.txt academy-ranking-ai-service/requirements.txt n8n-service-orchestration/requirements.txt chatbot/chatbot/requirements.txt; do
+            if [ -f "$req" ]; then
+              out="production-audit/sbom/$(echo "$req" | tr '/\\' '_' | sed 's/.txt$/.cyclonedx.json/')"
+              python -m pip_audit --no-deps -r "$req" -f cyclonedx-json -o "$out"
+            fi
+          done
+      - name: Flutter dependency freshness report
+        working-directory: sports-app
+        run: dart pub outdated --json > ../production-audit/flutter-pub-outdated.json
+        continue-on-error: true
+      - name: Upload dependency and SBOM reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-and-sbom-reports
+          path: |
+            sports_management_project/target/bom.*
+            production-audit/sbom/*.json
+            production-audit/flutter-pub-outdated.json

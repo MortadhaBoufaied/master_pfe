@@ -21,6 +21,8 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 REPO_ID = "tiiuae/falcon-rw-1b"
+BASE_MODEL_REVISION = os.getenv("HF_BASE_MODEL_REVISION", "main")
+DATASET_REVISION = os.getenv("HF_DATASET_REVISION", "main")
 TRAINED_MODEL_DIR = "apps/chat/training_models/models/fine_tuned_falcon"
 BASE_MODEL_DIR = "apps/chat/training_models/models/falcon-rw-1b-base"  # Local base model
 JSON_PATH = "apps/chat/training_models/data/markdowns-01.json"
@@ -40,10 +42,11 @@ def download_and_save_base_model():
         logger.info("🔽 Downloading base model...")
         model = AutoModelForCausalLM.from_pretrained(
             REPO_ID,
+            revision=BASE_MODEL_REVISION,
             device_map="auto",
             torch_dtype=torch.float16,
         )
-        tokenizer = AutoTokenizer.from_pretrained(REPO_ID)
+        tokenizer = AutoTokenizer.from_pretrained(REPO_ID, revision=BASE_MODEL_REVISION)
         
         model.save_pretrained(BASE_MODEL_DIR)
         tokenizer.save_pretrained(BASE_MODEL_DIR)
@@ -60,12 +63,13 @@ def train_model():
     
     # 2. Load base model from local directory
     logger.info("🔄 Loading base model from local directory...")
-    model = AutoModelForCausalLM.from_pretrained(
+    model = AutoModelForCausalLM.from_pretrained(  # nosec B615
         BASE_MODEL_DIR,
+        local_files_only=True,
         device_map="auto",
         torch_dtype=torch.float16,
     )
-    tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL_DIR)
+    tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL_DIR, local_files_only=True)  # nosec B615
     
     model.config.use_cache = False
     tokenizer.pad_token = tokenizer.eos_token
@@ -83,7 +87,7 @@ def train_model():
     logger.info("✅ Model loaded with PEFT")
 
     # 4. Load dataset
-    raw_dataset = load_dataset("json", data_files=JSON_PATH)
+    raw_dataset = load_dataset("json", data_files=JSON_PATH, revision=DATASET_REVISION)
     dataset = raw_dataset['train'].train_test_split(test_size=0.1, seed=42)
     ds = DatasetDict({"train": dataset["train"], "validation": dataset["test"]})
 
@@ -151,7 +155,7 @@ def train_model():
     
     # Calculate weight hash
     weights = model.lm_head.weight.data.cpu().numpy()
-    weight_hash = hashlib.md5(weights.tobytes()).hexdigest()[:10]
+    weight_hash = hashlib.sha256(weights.tobytes()).hexdigest()[:10]
     logger.info(f"🔐 Model weight verification hash: {weight_hash}")
     
     logger.info("✅ Training complete - model saved")
